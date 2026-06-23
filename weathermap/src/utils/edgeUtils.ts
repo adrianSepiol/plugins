@@ -11,7 +11,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-import { AnchorPoint, EdgeSpec, NodeSpec } from '../types/weathermap-types';
+import { AnchorPoint, EdgeSpec, EdgeThresholdStep, NodeSpec } from '../types/weathermap-types';
 
 // Unit offsets for each anchor (multiples of half node size)
 export const ANCHOR_OFFSETS: Record<AnchorPoint, [number, number]> = {
@@ -85,6 +85,17 @@ export function offsetLine(
 
 export function midpoint(pts: { x1: number; y1: number; x2: number; y2: number }): { x: number; y: number } {
   return { x: (pts.x1 + pts.x2) / 2, y: (pts.y1 + pts.y2) / 2 };
+}
+
+export function strokeWidthFromThresholds(value: number, steps: EdgeThresholdStep[], defaultWidth: number): number {
+  if (!steps.length) return defaultWidth;
+  let result = defaultWidth;
+  for (const step of steps) {
+    if (value >= step.value) {
+      result = step.strokeWidth;
+    }
+  }
+  return result;
 }
 
 // Shorten line from p2 end so arrowhead doesn't overlap the target

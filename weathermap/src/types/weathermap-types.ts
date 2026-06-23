@@ -41,9 +41,16 @@ export interface EdgeSpec {
   targetLabelTemplate?: string; // {{value}} template for target→source label
 }
 
+export interface EdgeThresholdStep {
+  value: number;
+  strokeWidth: number;
+}
+
 export interface WeathermapOptions {
   legend?: LegendSpecOptions;
   thresholds?: ThresholdOptions;
+  edgeThresholdWidths?: EdgeThresholdStep[];
+  edgeDefaultStrokeWidth?: number;
   querySettings?: QuerySettingsOptions;
   nodes?: NodeSpec[];
   edges?: EdgeSpec[];

@@ -16,13 +16,14 @@ import { TimeSeries, ThresholdOptions } from '@perses-dev/core';
 import { useChartsTheme } from '@perses-dev/components';
 import { select } from 'd3-selection';
 import { zoom, ZoomTransform, zoomIdentity } from 'd3-zoom';
-import { WeathermapProps } from '../../types/weathermap-types';
-import { edgeEndpoints, midpoint, offsetLine, shortenLine } from '../../utils/edgeUtils';
+import { WeathermapOptions, WeathermapProps } from '../../types/weathermap-types';
+import { edgeEndpoints, midpoint, offsetLine, shortenLine, strokeWidthFromThresholds } from '../../utils/edgeUtils';
 import { NodeRenderer } from '../node/NodeRenderer';
 import { EdgeLabel } from '../node/EdgeLabel';
 
 const MARKER_ID = 'wm-arrow-panel';
 const ARROW_SHORTEN = 6;
+const BIDIR_GAP = 8;
 
 function interpolateLabel(template: string, series: TimeSeries): string {
   const lastValue = series.values.length > 0 ? series.values[series.values.length - 1]?.[1] : null;
@@ -44,6 +45,33 @@ function colorFromThresholds(value: number, thresholds: ThresholdOptions, palett
     }
   }
   return result;
+}
+
+function resolveEdgeStyle(
+  queryIndex: number | undefined,
+  seriesByQueryIndex: Map<number, TimeSeries>,
+  spec: WeathermapOptions,
+  paletteColors: string[]
+): { stroke: string; strokeWidth: number } {
+  const defaultWidth = spec.edgeDefaultStrokeWidth ?? 2;
+  if (queryIndex === undefined) {
+    return { stroke: 'currentColor', strokeWidth: defaultWidth };
+  }
+  const series = seriesByQueryIndex.get(queryIndex);
+  if (!series) {
+    return { stroke: 'currentColor', strokeWidth: defaultWidth };
+  }
+  const lastTuple = series.values[series.values.length - 1];
+  const lastValue = lastTuple?.[1];
+  if (lastValue === null || lastValue === undefined) {
+    return { stroke: 'currentColor', strokeWidth: defaultWidth };
+  }
+
+  const stroke = spec.thresholds ? colorFromThresholds(lastValue, spec.thresholds, paletteColors) : 'currentColor';
+  const strokeWidth = spec.edgeThresholdWidths?.length
+    ? strokeWidthFromThresholds(lastValue, spec.edgeThresholdWidths, defaultWidth)
+    : defaultWidth;
+  return { stroke, strokeWidth };
 }
 
 export function WeathermapPanel(props: WeathermapProps): ReactElement | null {
@@ -88,6 +116,8 @@ export function WeathermapPanel(props: WeathermapProps): ReactElement | null {
     select<SVGSVGElement, unknown>(canvasRef.current).call(zoomBehavior.transform, zoomIdentity);
   }, [zoomBehavior]);
 
+  const paletteColors = chartsTheme.thresholds.palette;
+
   return (
     <svg
       ref={canvasRef}
@@ -108,7 +138,6 @@ export function WeathermapPanel(props: WeathermapProps): ReactElement | null {
           if (!pts) return null;
           const arrowPx = ARROW_SHORTEN / transform.k;
           const lineOffset = 4 / transform.k;
-          const strokeWidth = 2 / transform.k;
           const markerUrl = `url(#${MARKER_ID})`;
 
           function resolveLabel(queryIndex: number | undefined, template: string | undefined): string | null {
@@ -120,18 +149,24 @@ export function WeathermapPanel(props: WeathermapProps): ReactElement | null {
           }
 
           if (edge.bidirectional) {
-            const fwdLine = offsetLine(pts, lineOffset);
-            const bwdLine = offsetLine(pts, -lineOffset);
-            const fwdShortened = shortenLine(fwdLine, arrowPx);
-            // Backward arrow points from x2→x1, so shorten from x1 end
-            const bwdShortened = shortenLine(
-              { x1: bwdLine.x2, y1: bwdLine.y2, x2: bwdLine.x1, y2: bwdLine.y1 },
-              arrowPx
-            );
+            const mid = midpoint(pts);
+            const gapPx = BIDIR_GAP / transform.k;
+
+            // Forward half: from source anchor → midpoint (offset to one side)
+            const fwdHalf = offsetLine({ x1: pts.x1, y1: pts.y1, x2: mid.x, y2: mid.y }, lineOffset);
+            const fwdShortened = shortenLine(fwdHalf, arrowPx + gapPx / 2);
+
+            // Backward half: from target anchor → midpoint (offset to other side, then reverse for arrow direction)
+            const bwdHalfRaw = offsetLine({ x1: pts.x2, y1: pts.y2, x2: mid.x, y2: mid.y }, -lineOffset);
+            const bwdShortened = shortenLine(bwdHalfRaw, arrowPx + gapPx / 2);
+
+            const fwdStyle = resolveEdgeStyle(edge.sourceQueryIndex, seriesByQueryIndex, spec, paletteColors);
+            const bwdStyle = resolveEdgeStyle(edge.targetQueryIndex, seriesByQueryIndex, spec, paletteColors);
             const fwdLabel = resolveLabel(edge.sourceQueryIndex, edge.sourceLabelTemplate);
             const bwdLabel = resolveLabel(edge.targetQueryIndex, edge.targetLabelTemplate);
-            const fwdMid = midpoint(fwdLine);
-            const bwdMid = midpoint(bwdLine);
+            const fwdLabelPt = midpoint(fwdShortened);
+            const bwdLabelPt = midpoint(bwdShortened);
+
             return (
               <g key={i}>
                 <line
@@ -139,8 +174,8 @@ export function WeathermapPanel(props: WeathermapProps): ReactElement | null {
                   y1={fwdShortened.y1}
                   x2={fwdShortened.x2}
                   y2={fwdShortened.y2}
-                  stroke="currentColor"
-                  strokeWidth={strokeWidth}
+                  stroke={fwdStyle.stroke}
+                  strokeWidth={fwdStyle.strokeWidth / transform.k}
                   strokeOpacity={0.8}
                   markerEnd={markerUrl}
                 />
@@ -149,18 +184,19 @@ export function WeathermapPanel(props: WeathermapProps): ReactElement | null {
                   y1={bwdShortened.y1}
                   x2={bwdShortened.x2}
                   y2={bwdShortened.y2}
-                  stroke="currentColor"
-                  strokeWidth={strokeWidth}
+                  stroke={bwdStyle.stroke}
+                  strokeWidth={bwdStyle.strokeWidth / transform.k}
                   strokeOpacity={0.8}
                   markerEnd={markerUrl}
                 />
-                {fwdLabel && <EdgeLabel x={fwdMid.x} y={fwdMid.y} text={fwdLabel} k={transform.k} />}
-                {bwdLabel && <EdgeLabel x={bwdMid.x} y={bwdMid.y} text={bwdLabel} k={transform.k} />}
+                {fwdLabel && <EdgeLabel x={fwdLabelPt.x} y={fwdLabelPt.y} text={fwdLabel} k={transform.k} />}
+                {bwdLabel && <EdgeLabel x={bwdLabelPt.x} y={bwdLabelPt.y} text={bwdLabel} k={transform.k} />}
               </g>
             );
           }
 
           const shortened = shortenLine(pts, arrowPx);
+          const edgeStyle = resolveEdgeStyle(edge.sourceQueryIndex, seriesByQueryIndex, spec, paletteColors);
           const label = resolveLabel(edge.sourceQueryIndex, edge.sourceLabelTemplate);
           const mid = midpoint(pts);
           return (
@@ -170,8 +206,8 @@ export function WeathermapPanel(props: WeathermapProps): ReactElement | null {
                 y1={shortened.y1}
                 x2={shortened.x2}
                 y2={shortened.y2}
-                stroke="currentColor"
-                strokeWidth={strokeWidth}
+                stroke={edgeStyle.stroke}
+                strokeWidth={edgeStyle.strokeWidth / transform.k}
                 strokeOpacity={0.8}
                 markerEnd={markerUrl}
               />

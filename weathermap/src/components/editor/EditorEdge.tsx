@@ -13,8 +13,10 @@
 
 import { PointerEvent, ReactElement } from 'react';
 import { AnchorPoint, EdgeSpec, NodeSpec } from '../../types/weathermap-types';
-import { edgeEndpoints, offsetLine, shortenLine } from '../../utils/edgeUtils';
+import { edgeEndpoints, midpoint, offsetLine, shortenLine } from '../../utils/edgeUtils';
 import { EditorTheme } from '../../utils/editorTheme';
+
+const BIDIR_GAP = 8;
 
 interface EditorEdgeProps {
   edge: EdgeSpec;
@@ -59,10 +61,15 @@ export function EditorEdge({
   const edgeStyle = isSelected ? theme.edgeSelected : theme.edge;
 
   if (edge.bidirectional) {
-    const fwdLine = offsetLine(pts, lineOffset);
-    const bwdLine = offsetLine(pts, -lineOffset);
-    const fwdShortened = shortenLine(fwdLine, arrowShorten);
-    const bwdShortened = shortenLine({ x1: bwdLine.x2, y1: bwdLine.y2, x2: bwdLine.x1, y2: bwdLine.y1 }, arrowShorten);
+    const mid = midpoint(pts);
+    const gapPx = BIDIR_GAP / k;
+
+    const fwdHalf = offsetLine({ x1: pts.x1, y1: pts.y1, x2: mid.x, y2: mid.y }, lineOffset);
+    const fwdShortened = shortenLine(fwdHalf, arrowShorten + gapPx / 2);
+
+    const bwdHalfRaw = offsetLine({ x1: pts.x2, y1: pts.y2, x2: mid.x, y2: mid.y }, -lineOffset);
+    const bwdShortened = shortenLine(bwdHalfRaw, arrowShorten + gapPx / 2);
+
     return (
       <g>
         <line
