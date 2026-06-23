@@ -17,8 +17,9 @@ import { useChartsTheme } from '@perses-dev/components';
 import { select } from 'd3-selection';
 import { zoom, ZoomTransform, zoomIdentity } from 'd3-zoom';
 import { WeathermapProps } from '../../types/weathermap-types';
-import { edgeEndpoints, shortenLine } from '../../utils/edgeUtils';
+import { edgeEndpoints, midpoint, offsetLine, shortenLine } from '../../utils/edgeUtils';
 import { NodeRenderer } from '../node/NodeRenderer';
+import { EdgeLabel } from '../node/EdgeLabel';
 
 const MARKER_ID = 'wm-arrow-panel';
 const ARROW_SHORTEN = 6;
@@ -105,19 +106,77 @@ export function WeathermapPanel(props: WeathermapProps): ReactElement | null {
         {edges.map((edge, i) => {
           const pts = edgeEndpoints(edge, nodeById);
           if (!pts) return null;
-          const shortened = shortenLine(pts, ARROW_SHORTEN / transform.k);
+          const arrowPx = ARROW_SHORTEN / transform.k;
+          const lineOffset = 4 / transform.k;
+          const strokeWidth = 2 / transform.k;
+          const markerUrl = `url(#${MARKER_ID})`;
+
+          function resolveLabel(queryIndex: number | undefined, template: string | undefined): string | null {
+            if (queryIndex === undefined) return null;
+            const series = seriesByQueryIndex.get(queryIndex);
+            if (!series) return null;
+            const tmpl = template ?? '{{value}}';
+            return interpolateLabel(tmpl, series);
+          }
+
+          if (edge.bidirectional) {
+            const fwdLine = offsetLine(pts, lineOffset);
+            const bwdLine = offsetLine(pts, -lineOffset);
+            const fwdShortened = shortenLine(fwdLine, arrowPx);
+            // Backward arrow points from x2→x1, so shorten from x1 end
+            const bwdShortened = shortenLine(
+              { x1: bwdLine.x2, y1: bwdLine.y2, x2: bwdLine.x1, y2: bwdLine.y1 },
+              arrowPx
+            );
+            const fwdLabel = resolveLabel(edge.sourceQueryIndex, edge.sourceLabelTemplate);
+            const bwdLabel = resolveLabel(edge.targetQueryIndex, edge.targetLabelTemplate);
+            const fwdMid = midpoint(fwdLine);
+            const bwdMid = midpoint(bwdLine);
+            return (
+              <g key={i}>
+                <line
+                  x1={fwdShortened.x1}
+                  y1={fwdShortened.y1}
+                  x2={fwdShortened.x2}
+                  y2={fwdShortened.y2}
+                  stroke="currentColor"
+                  strokeWidth={strokeWidth}
+                  strokeOpacity={0.8}
+                  markerEnd={markerUrl}
+                />
+                <line
+                  x1={bwdShortened.x1}
+                  y1={bwdShortened.y1}
+                  x2={bwdShortened.x2}
+                  y2={bwdShortened.y2}
+                  stroke="currentColor"
+                  strokeWidth={strokeWidth}
+                  strokeOpacity={0.8}
+                  markerEnd={markerUrl}
+                />
+                {fwdLabel && <EdgeLabel x={fwdMid.x} y={fwdMid.y} text={fwdLabel} k={transform.k} />}
+                {bwdLabel && <EdgeLabel x={bwdMid.x} y={bwdMid.y} text={bwdLabel} k={transform.k} />}
+              </g>
+            );
+          }
+
+          const shortened = shortenLine(pts, arrowPx);
+          const label = resolveLabel(edge.sourceQueryIndex, edge.sourceLabelTemplate);
+          const mid = midpoint(pts);
           return (
-            <line
-              key={i}
-              x1={shortened.x1}
-              y1={shortened.y1}
-              x2={shortened.x2}
-              y2={shortened.y2}
-              stroke="currentColor"
-              strokeWidth={2 / transform.k}
-              strokeOpacity={0.8}
-              markerEnd={`url(#${MARKER_ID})`}
-            />
+            <g key={i}>
+              <line
+                x1={shortened.x1}
+                y1={shortened.y1}
+                x2={shortened.x2}
+                y2={shortened.y2}
+                stroke="currentColor"
+                strokeWidth={strokeWidth}
+                strokeOpacity={0.8}
+                markerEnd={markerUrl}
+              />
+              {label && <EdgeLabel x={mid.x} y={mid.y} text={label} k={transform.k} />}
+            </g>
           );
         })}
 

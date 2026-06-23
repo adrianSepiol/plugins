@@ -12,7 +12,8 @@
 // limitations under the License.
 
 import { ReactElement } from 'react';
-import { MenuItem, Stack, TextField, Typography } from '@mui/material';
+import { Checkbox, FormControlLabel, MenuItem, Stack, TextField, Typography } from '@mui/material';
+import { useQueryCountContext } from '@perses-dev/plugin-system';
 import { AnchorPoint, EdgeSpec, NodeSpec } from '../../types/weathermap-types';
 
 const ANCHOR_OPTIONS: AnchorPoint[] = ['n', 'ne', 'e', 'se', 's', 'sw', 'w', 'nw'];
@@ -25,6 +26,8 @@ interface EdgePropertiesPanelProps {
 
 export function EdgePropertiesPanel({ edge, nodes, onChange }: EdgePropertiesPanelProps): ReactElement {
   const hasFreeTarget = edge.target === '';
+  const queryCount = useQueryCountContext();
+  const queryIndexes = Array.from({ length: queryCount }, (_, i) => i);
 
   return (
     <Stack spacing={2}>
@@ -96,6 +99,77 @@ export function EdgePropertiesPanel({ edge, nodes, onChange }: EdgePropertiesPan
           </MenuItem>
         ))}
       </TextField>
+
+      <FormControlLabel
+        control={
+          <Checkbox
+            size="small"
+            checked={edge.bidirectional ?? false}
+            onChange={(e) => onChange({ ...edge, bidirectional: e.target.checked || undefined })}
+          />
+        }
+        label="Bidirectional"
+      />
+
+      <TextField
+        select
+        label="Source → target query"
+        size="small"
+        value={edge.sourceQueryIndex ?? ''}
+        onChange={(e) => {
+          const v = e.target.value;
+          onChange({ ...edge, sourceQueryIndex: v === '' ? undefined : Number(v) });
+        }}
+      >
+        <MenuItem value="">
+          <em>None</em>
+        </MenuItem>
+        {queryIndexes.map((qi) => (
+          <MenuItem key={qi} value={qi}>
+            #{qi + 1}
+          </MenuItem>
+        ))}
+      </TextField>
+
+      <TextField
+        label="Source label template"
+        size="small"
+        value={edge.sourceLabelTemplate ?? ''}
+        onChange={(e) => onChange({ ...edge, sourceLabelTemplate: e.target.value || undefined })}
+        helperText="Use {{value}} to show query result"
+      />
+
+      {edge.bidirectional && (
+        <>
+          <TextField
+            select
+            label="Target → source query"
+            size="small"
+            value={edge.targetQueryIndex ?? ''}
+            onChange={(e) => {
+              const v = e.target.value;
+              onChange({ ...edge, targetQueryIndex: v === '' ? undefined : Number(v) });
+            }}
+          >
+            <MenuItem value="">
+              <em>None</em>
+            </MenuItem>
+            {queryIndexes.map((qi) => (
+              <MenuItem key={qi} value={qi}>
+                #{qi + 1}
+              </MenuItem>
+            ))}
+          </TextField>
+
+          <TextField
+            label="Target label template"
+            size="small"
+            value={edge.targetLabelTemplate ?? ''}
+            onChange={(e) => onChange({ ...edge, targetLabelTemplate: e.target.value || undefined })}
+            helperText="Use {{value}} to show query result"
+          />
+        </>
+      )}
     </Stack>
   );
 }

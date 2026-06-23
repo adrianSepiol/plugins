@@ -13,7 +13,7 @@
 
 import { PointerEvent, ReactElement } from 'react';
 import { AnchorPoint, EdgeSpec, NodeSpec } from '../../types/weathermap-types';
-import { edgeEndpoints, shortenLine } from '../../utils/edgeUtils';
+import { edgeEndpoints, offsetLine, shortenLine } from '../../utils/edgeUtils';
 import { EditorTheme } from '../../utils/editorTheme';
 
 interface EditorEdgeProps {
@@ -23,6 +23,7 @@ interface EditorEdgeProps {
   isDragging: boolean;
   markerUrl: string;
   arrowShorten: number;
+  k: number;
   theme: EditorTheme;
   onEdgeClick: (event: PointerEvent<SVGLineElement>) => void;
   onEndpointPointerDown: (
@@ -42,6 +43,7 @@ export function EditorEdge({
   isDragging,
   markerUrl,
   arrowShorten,
+  k,
   theme,
   onEdgeClick,
   onEndpointPointerDown,
@@ -50,9 +52,72 @@ export function EditorEdge({
   if (!pts) {
     return null;
   }
-  const shortened = shortenLine(pts, arrowShorten);
+  const lineOffset = 4 / k;
   const srcAnchor: AnchorPoint = edge.sourceAnchor ?? 'n';
   const tgtAnchor: AnchorPoint = edge.targetAnchor ?? 'n';
+
+  const edgeStyle = isSelected ? theme.edgeSelected : theme.edge;
+
+  if (edge.bidirectional) {
+    const fwdLine = offsetLine(pts, lineOffset);
+    const bwdLine = offsetLine(pts, -lineOffset);
+    const fwdShortened = shortenLine(fwdLine, arrowShorten);
+    const bwdShortened = shortenLine({ x1: bwdLine.x2, y1: bwdLine.y2, x2: bwdLine.x1, y2: bwdLine.y1 }, arrowShorten);
+    return (
+      <g>
+        <line
+          x1={pts.x1}
+          y1={pts.y1}
+          x2={pts.x2}
+          y2={pts.y2}
+          stroke="transparent"
+          {...theme.edgeHit}
+          style={{ cursor: 'pointer' }}
+          onPointerDown={onEdgeClick}
+        />
+        <line
+          x1={fwdShortened.x1}
+          y1={fwdShortened.y1}
+          x2={fwdShortened.x2}
+          y2={fwdShortened.y2}
+          {...edgeStyle}
+          markerEnd={markerUrl}
+          style={{ pointerEvents: 'none' }}
+        />
+        <line
+          x1={bwdShortened.x1}
+          y1={bwdShortened.y1}
+          x2={bwdShortened.x2}
+          y2={bwdShortened.y2}
+          {...edgeStyle}
+          markerEnd={markerUrl}
+          style={{ pointerEvents: 'none' }}
+        />
+        {isSelected && !isDragging && (
+          <>
+            <circle
+              cx={pts.x1}
+              cy={pts.y1}
+              {...theme.edgeHandle}
+              style={{ cursor: 'grab' }}
+              onPointerDown={(event) =>
+                onEndpointPointerDown(event, 'source', pts.x2, pts.y2, edge.target || edge.source, tgtAnchor)
+              }
+            />
+            <circle
+              cx={pts.x2}
+              cy={pts.y2}
+              {...theme.edgeHandle}
+              style={{ cursor: 'grab' }}
+              onPointerDown={(event) => onEndpointPointerDown(event, 'target', pts.x1, pts.y1, edge.source, srcAnchor)}
+            />
+          </>
+        )}
+      </g>
+    );
+  }
+
+  const shortened = shortenLine(pts, arrowShorten);
 
   return (
     <g>
@@ -71,7 +136,7 @@ export function EditorEdge({
         y1={shortened.y1}
         x2={shortened.x2}
         y2={shortened.y2}
-        {...(isSelected ? theme.edgeSelected : theme.edge)}
+        {...edgeStyle}
         markerEnd={markerUrl}
         style={{ pointerEvents: 'none' }}
       />

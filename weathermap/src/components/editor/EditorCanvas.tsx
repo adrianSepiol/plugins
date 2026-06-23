@@ -279,6 +279,7 @@ export function EditorCanvas({ value, onChange, state, dispatch }: EditorCanvasP
             isDragging={dragEdge !== null}
             markerUrl={markerUrl}
             arrowShorten={arrowShorten}
+            k={transform.k}
             theme={theme}
             onEdgeClick={(event) => onEdgeClick(event, edge.id)}
             onEndpointPointerDown={(event, end, fixedX, fixedY, fixedNodeId, fixedAnchor) =>

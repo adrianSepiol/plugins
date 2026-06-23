@@ -69,6 +69,24 @@ export function edgeEndpoints(
   return { x1: p1.x, y1: p1.y, x2: p2.x, y2: p2.y };
 }
 
+// Shifts both endpoints perpendicularly by `offset` pixels (positive = left of direction)
+export function offsetLine(
+  pts: { x1: number; y1: number; x2: number; y2: number },
+  offset: number
+): { x1: number; y1: number; x2: number; y2: number } {
+  const dx = pts.x2 - pts.x1;
+  const dy = pts.y2 - pts.y1;
+  const len = Math.hypot(dx, dy);
+  if (len === 0) return pts;
+  const px = (-dy / len) * offset;
+  const py = (dx / len) * offset;
+  return { x1: pts.x1 + px, y1: pts.y1 + py, x2: pts.x2 + px, y2: pts.y2 + py };
+}
+
+export function midpoint(pts: { x1: number; y1: number; x2: number; y2: number }): { x: number; y: number } {
+  return { x: (pts.x1 + pts.x2) / 2, y: (pts.y1 + pts.y2) / 2 };
+}
+
 // Shorten line from p2 end so arrowhead doesn't overlap the target
 export function shortenLine(
   pts: { x1: number; y1: number; x2: number; y2: number },

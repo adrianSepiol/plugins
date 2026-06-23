@@ -34,6 +34,11 @@ export interface EdgeSpec {
   targetAnchor?: AnchorPoint;
   x2?: number; // free endpoint x (when target === '')
   y2?: number; // free endpoint y (when target === '')
+  bidirectional?: boolean;
+  sourceQueryIndex?: number; // query index for the source→target direction label
+  targetQueryIndex?: number; // query index for the target→source direction label
+  sourceLabelTemplate?: string; // {{value}} template for source→target label
+  targetLabelTemplate?: string; // {{value}} template for target→source label
 }
 
 export interface WeathermapOptions {
