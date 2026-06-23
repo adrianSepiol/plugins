@@ -72,7 +72,7 @@ export function EditorCanvas({ value, onChange, state, dispatch }: EditorCanvasP
     .filter((ed) => selectedIds.has(ed.id) && ed.x2 !== undefined && ed.y2 !== undefined)
     .map((ed) => ({ ...ed, x2: ed.x2!, y2: ed.y2! }));
   const selectionBoundingBox =
-    mode.type === 'idle' && selectedIds.size >= 1
+    mode.type === 'idle' && selectedNodes.length >= 1
       ? nodeBBox(
           selectedNodes,
           selectedFloatingEdges.map((ed) => ({ x: ed.x2, y: ed.y2 }))
@@ -275,7 +275,7 @@ export function EditorCanvas({ value, onChange, state, dispatch }: EditorCanvasP
             key={edge.id}
             edge={edge}
             nodeById={nodeById}
-            isSelected={selectedIds.has(edge.id)}
+            isSelected={!selectionBoundingBox && selectedIds.has(edge.id)}
             isDragging={dragEdge !== null}
             markerUrl={markerUrl}
             arrowShorten={arrowShorten}

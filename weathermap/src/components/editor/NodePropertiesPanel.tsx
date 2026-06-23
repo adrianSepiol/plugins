@@ -29,11 +29,48 @@ interface NodePropertiesPanelProps {
 export function NodePropertiesPanel({ node, onChange }: NodePropertiesPanelProps): ReactElement {
   const queryCount = useQueryCountContext();
   const queryIndexes = Array.from({ length: queryCount }, (_, i) => i);
-  const kind = node.kind ?? 'rectangle';
+  const kind = node.kind;
 
   return (
     <Stack spacing={2}>
       <Typography variant="subtitle2">Node properties</Typography>
+
+      <Stack direction="row" spacing={1}>
+        <TextField
+          label="X"
+          size="small"
+          type="number"
+          value={node.x}
+          onChange={(e) => {
+            const v = parseInt(e.target.value, 10);
+            if (!isNaN(v)) onChange({ ...node, x: v });
+          }}
+          sx={{ width: 80 }}
+        />
+        <TextField
+          label="Y"
+          size="small"
+          type="number"
+          value={node.y}
+          onChange={(e) => {
+            const v = parseInt(e.target.value, 10);
+            if (!isNaN(v)) onChange({ ...node, y: v });
+          }}
+          sx={{ width: 80 }}
+        />
+        <TextField
+          label="Size"
+          size="small"
+          type="number"
+          value={node.size}
+          inputProps={{ min: 8 }}
+          onChange={(e) => {
+            const v = parseInt(e.target.value, 10);
+            if (!isNaN(v) && v >= 8) onChange({ ...node, size: v });
+          }}
+          sx={{ width: 80 }}
+        />
+      </Stack>
 
       <TextField
         select

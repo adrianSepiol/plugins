@@ -16,7 +16,7 @@ export interface NodeSpec {
   x: number;
   y: number;
   size: number;
-  kind?: 'rectangle' | 'icon' | 'text'; // visual style; defaults to 'rectangle'
+  kind: 'rectangle' | 'icon' | 'text';
   label?: string;
   icon?: string;
   queryIndex?: number; // index into queryResults; enables {{label}} interpolation in label

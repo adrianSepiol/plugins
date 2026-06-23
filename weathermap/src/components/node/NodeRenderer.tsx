@@ -35,7 +35,7 @@ export function NodeRenderer({
   labelOverride,
   fillOverride,
 }: NodeRendererProps): ReactElement {
-  const kind = node.kind ?? 'rectangle';
+  const kind = node.kind;
   const half = node.size / 2;
   const displayLabel = labelOverride ?? node.label;
 
