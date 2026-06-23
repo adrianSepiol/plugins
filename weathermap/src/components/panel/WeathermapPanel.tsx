@@ -23,7 +23,7 @@ import { EdgeLabel } from '../node/EdgeLabel';
 
 const MARKER_ID = 'wm-arrow-panel';
 const ARROW_SHORTEN = 6;
-const BIDIR_GAP = 8;
+const BIDIR_GAP = 2;
 
 function interpolateLabel(template: string, series: TimeSeries): string {
   const lastValue = series.values.length > 0 ? series.values[series.values.length - 1]?.[1] : null;

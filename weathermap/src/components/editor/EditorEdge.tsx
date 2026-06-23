@@ -16,7 +16,7 @@ import { AnchorPoint, EdgeSpec, NodeSpec } from '../../types/weathermap-types';
 import { edgeEndpoints, midpoint, offsetLine, shortenLine } from '../../utils/edgeUtils';
 import { EditorTheme } from '../../utils/editorTheme';
 
-const BIDIR_GAP = 8;
+const BIDIR_GAP = 2;
 
 interface EditorEdgeProps {
   edge: EdgeSpec;
