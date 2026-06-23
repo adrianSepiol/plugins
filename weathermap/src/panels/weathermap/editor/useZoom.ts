@@ -1,0 +1,67 @@
+// Copyright The Perses Authors
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+// http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+import { PointerEvent, useCallback, useMemo, useRef, useState } from 'react';
+import { select } from 'd3-selection';
+import { zoom, zoomIdentity, ZoomTransform } from 'd3-zoom';
+
+export interface UseZoomResult {
+  applyZoomBehaviour: (node: SVGSVGElement) => void;
+  transform: ZoomTransform;
+  resetPan: () => void;
+  toSvgPoint: (event: PointerEvent<SVGSVGElement>) => { x: number; y: number };
+}
+
+export function useZoom(): UseZoomResult {
+  const [transform, setTransform] = useState<ZoomTransform>(zoomIdentity);
+  const nodeRef = useRef<SVGSVGElement | null>(null);
+
+  const zoomBehavior = useMemo(() => zoom<SVGSVGElement, unknown>(), []);
+
+  const applyZoomBehaviour = useCallback(
+    (node: SVGSVGElement): void => {
+      nodeRef.current = node;
+      zoomBehavior.on('zoom', ({ transform: t }: { transform: ZoomTransform }) => setTransform(t));
+      zoomBehavior.filter((event: Event) => {
+        if (event.type === 'dblclick') {
+          return false;
+        }
+        if (event.type === 'wheel') {
+          return true;
+        }
+        return event instanceof MouseEvent && event.button === 1;
+      });
+      select<SVGSVGElement, unknown>(node).call(zoomBehavior);
+    },
+    [zoomBehavior]
+  );
+
+  const resetPan = useCallback(() => {
+    if (!nodeRef.current) {
+      return;
+    }
+    select<SVGSVGElement, unknown>(nodeRef.current).call(zoomBehavior.transform, zoomIdentity);
+  }, [zoomBehavior]);
+
+  const toSvgPoint = useCallback(
+    (event: PointerEvent<SVGSVGElement>): { x: number; y: number } => {
+      const rect = nodeRef.current!.getBoundingClientRect();
+      const px = event.clientX - rect.left;
+      const py = event.clientY - rect.top;
+      return { x: transform.invertX(px), y: transform.invertY(py) };
+    },
+    [transform]
+  );
+
+  return { applyZoomBehaviour, transform, resetPan, toSvgPoint };
+}
