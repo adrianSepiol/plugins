@@ -16,14 +16,14 @@ import { Box, Button, Divider } from '@mui/material';
 import { produce } from 'immer';
 import { NodeSpec, WeathermapOptionsEditorProps } from '../types/weathermap-types';
 import { editorReducer, INITIAL_EDITOR_STATE } from '../utils/editorReducer';
-import { DEFAULT_NODE_SIZE } from './WeathermapNode';
+import { DEFAULT_NODE_SIZE } from './NodeRenderer';
 import { NodePropertiesPanel } from './NodePropertiesPanel';
-import { WeathermapCanvas } from './WeathermapCanvas';
+import { EditorCanvas } from './EditorCanvas';
 
 const CANVAS_WIDTH = 600;
 const CANVAS_HEIGHT = 400;
 
-export function WeathermapNodeEditor({ value, onChange }: WeathermapOptionsEditorProps): ReactElement {
+export function WeathermapEditor({ value, onChange }: WeathermapOptionsEditorProps): ReactElement {
   const nodes = value.nodes ?? [];
 
   const [state, dispatch] = useReducer(editorReducer, INITIAL_EDITOR_STATE);
@@ -57,7 +57,7 @@ export function WeathermapNodeEditor({ value, onChange }: WeathermapOptionsEdito
   return (
     <Box sx={{ display: 'flex', gap: 2, alignItems: 'flex-start' }}>
       <Box>
-        <WeathermapCanvas value={value} onChange={onChange} state={state} dispatch={dispatch} />
+        <EditorCanvas value={value} onChange={onChange} state={state} dispatch={dispatch} />
         <Button variant="outlined" size="small" onClick={addNode} sx={{ mt: 1 }}>
           Add Node
         </Button>

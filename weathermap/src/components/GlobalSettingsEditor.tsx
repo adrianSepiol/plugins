@@ -21,9 +21,9 @@ import { LegendOptionsEditor, LegendOptionsEditorProps, OptionsEditorProps } fro
 import { ReactElement } from 'react';
 import { WeathermapOptions } from '../types/weathermap-types';
 
-type WeathermapSettingsEditorProps = OptionsEditorProps<WeathermapOptions>;
+type GlobalSettingsEditorProps = OptionsEditorProps<WeathermapOptions>;
 
-export function WeathermapSettingsEditor(props: WeathermapSettingsEditorProps): ReactElement {
+export function GlobalSettingsEditor(props: GlobalSettingsEditorProps): ReactElement {
   const { onChange, value } = props;
 
   const handleLegendChange: LegendOptionsEditorProps['onChange'] = (newLegend) => {

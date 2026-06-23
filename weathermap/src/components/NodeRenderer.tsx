@@ -20,7 +20,7 @@ import { TextNode } from './TextNode';
 export const DEFAULT_NODE_SIZE = 48;
 export { CORNER_RADIUS_RATIO } from './RectangleNode';
 
-interface WeathermapNodeProps {
+interface NodeRendererProps {
   node: NodeSpec;
   groupProps?: React.SVGProps<SVGGElement>;
   rectProps?: React.SVGProps<SVGRectElement>;
@@ -28,13 +28,13 @@ interface WeathermapNodeProps {
   fillOverride?: string;
 }
 
-export function WeathermapNode({
+export function NodeRenderer({
   node,
   groupProps,
   rectProps,
   labelOverride,
   fillOverride,
-}: WeathermapNodeProps): ReactElement {
+}: NodeRendererProps): ReactElement {
   const kind = node.kind ?? 'rectangle';
   const half = node.size / 2;
   const displayLabel = labelOverride ?? node.label;

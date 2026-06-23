@@ -50,14 +50,14 @@ function isCanvasBackground(event: PointerEvent<SVGSVGElement>): boolean {
   return !event.target.closest('rect') && !event.target.closest('[data-cross]');
 }
 
-interface WeathermapCanvasProps {
+interface EditorCanvasProps {
   value: WeathermapOptions;
   onChange: (v: WeathermapOptions) => void;
   state: EditorState;
   dispatch: React.Dispatch<EditorAction>;
 }
 
-export function WeathermapCanvas({ value, onChange, state, dispatch }: WeathermapCanvasProps): ReactElement {
+export function EditorCanvas({ value, onChange, state, dispatch }: EditorCanvasProps): ReactElement {
   const { applyZoomBehaviour, transform, resetPan, toSvgPoint } = useZoom();
   const nodes = value.nodes ?? [];
   const edges = value.edges ?? [];

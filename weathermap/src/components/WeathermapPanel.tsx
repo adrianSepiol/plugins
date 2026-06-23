@@ -18,7 +18,7 @@ import { select } from 'd3-selection';
 import { zoom, ZoomTransform, zoomIdentity } from 'd3-zoom';
 import { WeathermapProps } from '../types/weathermap-types';
 import { edgeEndpoints, shortenLine } from '../utils/edgeUtils';
-import { WeathermapNode } from './WeathermapNode';
+import { NodeRenderer } from './NodeRenderer';
 
 const MARKER_ID = 'wm-arrow-panel';
 const ARROW_SHORTEN = 6;
@@ -45,7 +45,7 @@ function colorFromThresholds(value: number, thresholds: ThresholdOptions, palett
   return result;
 }
 
-export function WeathermapComponent(props: WeathermapProps): ReactElement | null {
+export function WeathermapPanel(props: WeathermapProps): ReactElement | null {
   const { contentDimensions, spec, queryResults } = props;
   const chartsTheme = useChartsTheme();
 
@@ -144,7 +144,7 @@ export function WeathermapComponent(props: WeathermapProps): ReactElement | null
           }
 
           return (
-            <WeathermapNode
+            <NodeRenderer
               key={node.id}
               node={node}
               rectProps={{ strokeWidth: 2 / transform.k }}

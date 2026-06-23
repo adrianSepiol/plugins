@@ -14,7 +14,7 @@
 import { PointerEvent, ReactElement } from 'react';
 import { NodeSpec, AnchorPoint } from '../types/weathermap-types';
 import { EditorTheme } from '../utils/editorTheme';
-import { WeathermapNode } from './WeathermapNode';
+import { NodeRenderer } from './NodeRenderer';
 import { ConnectionHandles } from './ConnectionHandles';
 
 interface EditorNodeProps {
@@ -48,7 +48,7 @@ export function EditorNode({
 }: EditorNodeProps): ReactElement {
   return (
     <g onMouseEnter={onMouseEnter} onMouseLeave={onMouseLeave}>
-      <WeathermapNode
+      <NodeRenderer
         node={node}
         rectProps={{
           style: { cursor: 'move' },

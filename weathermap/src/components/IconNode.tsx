@@ -11,7 +11,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-import { ReactElement } from 'react';
+import { ReactElement, SVGProps } from 'react';
 import { NodeSpec } from '../types/weathermap-types';
 import { ICON_PATHS } from '../utils/icons';
 
@@ -23,7 +23,7 @@ export interface IconNodeProps {
   half: number;
   displayLabel: string | undefined;
   fillOverride: string | undefined;
-  rectProps?: React.SVGProps<SVGRectElement>;
+  rectProps?: SVGProps<SVGRectElement>;
 }
 
 export function IconNode({ node, nodeSize, half, displayLabel, fillOverride, rectProps }: IconNodeProps): ReactElement {

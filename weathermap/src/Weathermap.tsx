@@ -1,14 +1,14 @@
 import { PanelPlugin } from '@perses-dev/plugin-system';
-import { WeathermapComponent } from './components/WeathermapComponent';
+import { WeathermapPanel } from './components/WeathermapPanel';
 import { WeathermapOptions, WeathermapProps } from './types/weathermap-types';
-import { WeathermapSettingsEditor } from './components/WeathermapSettingsEditor';
-import { WeathermapNodeEditor } from './components/WeathermapNodeEditor';
+import { GlobalSettingsEditor } from './components/GlobalSettingsEditor';
+import { WeathermapEditor } from './components/WeathermapEditor';
 
 export const Weathermap: PanelPlugin<WeathermapOptions, WeathermapProps> = {
-  PanelComponent: WeathermapComponent,
+  PanelComponent: WeathermapPanel,
   panelOptionsEditorComponents: [
-    { label: 'Settings', content: WeathermapSettingsEditor },
-    { label: 'Nodes', content: WeathermapNodeEditor },
+    { label: 'Settings', content: GlobalSettingsEditor },
+    { label: 'Nodes', content: WeathermapEditor },
   ],
   supportedQueryTypes: ['TimeSeriesQuery'],
   createInitialOptions: () => ({}),
