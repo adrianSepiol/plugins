@@ -16,9 +16,9 @@ import { TimeSeries, ThresholdOptions } from '@perses-dev/core';
 import { useChartsTheme } from '@perses-dev/components';
 import { select } from 'd3-selection';
 import { zoom, ZoomTransform, zoomIdentity } from 'd3-zoom';
-import { WeathermapProps } from '../types/weathermap-types';
-import { edgeEndpoints, shortenLine } from '../utils/edgeUtils';
-import { NodeRenderer } from './NodeRenderer';
+import { WeathermapProps } from '../../types/weathermap-types';
+import { edgeEndpoints, shortenLine } from '../../utils/edgeUtils';
+import { NodeRenderer } from '../node/NodeRenderer';
 
 const MARKER_ID = 'wm-arrow-panel';
 const ARROW_SHORTEN = 6;

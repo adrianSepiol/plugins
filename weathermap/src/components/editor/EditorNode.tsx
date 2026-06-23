@@ -12,9 +12,9 @@
 // limitations under the License.
 
 import { PointerEvent, ReactElement } from 'react';
-import { NodeSpec, AnchorPoint } from '../types/weathermap-types';
-import { EditorTheme } from '../utils/editorTheme';
-import { NodeRenderer } from './NodeRenderer';
+import { NodeSpec, AnchorPoint } from '../../types/weathermap-types';
+import { EditorTheme } from '../../utils/editorTheme';
+import { NodeRenderer } from '../node/NodeRenderer';
 import { ConnectionHandles } from './ConnectionHandles';
 
 interface EditorNodeProps {

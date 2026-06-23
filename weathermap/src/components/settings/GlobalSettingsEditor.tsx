@@ -19,7 +19,7 @@ import {
 } from '@perses-dev/components';
 import { LegendOptionsEditor, LegendOptionsEditorProps, OptionsEditorProps } from '@perses-dev/plugin-system';
 import { ReactElement } from 'react';
-import { WeathermapOptions } from '../types/weathermap-types';
+import { WeathermapOptions } from '../../types/weathermap-types';
 
 type GlobalSettingsEditorProps = OptionsEditorProps<WeathermapOptions>;
 

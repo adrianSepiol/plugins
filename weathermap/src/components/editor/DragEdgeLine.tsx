@@ -12,9 +12,9 @@
 // limitations under the License.
 
 import { ReactElement } from 'react';
-import { DragEdge } from '../types/editor-types';
-import { shortenLine } from '../utils/edgeUtils';
-import { EditorTheme } from '../utils/editorTheme';
+import { DragEdge } from '../../types/editor-types';
+import { shortenLine } from '../../utils/edgeUtils';
+import { EditorTheme } from '../../utils/editorTheme';
 
 interface DragEdgeLineProps {
   dragEdge: DragEdge;

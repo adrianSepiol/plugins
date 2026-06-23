@@ -12,16 +12,27 @@
 // limitations under the License.
 
 import { ReactElement } from 'react';
-import { ICON_PATHS } from '../utils/icons';
+import { SelectionRect } from '../../types/editor-types';
+import { EditorTheme } from '../../utils/editorTheme';
 
-interface IconPreviewProps {
-  name: string;
+interface SelectionRectOverlayProps {
+  rect: SelectionRect;
+  theme: EditorTheme;
 }
 
-export function IconPreview({ name }: IconPreviewProps): ReactElement {
+export function SelectionRectOverlay({ rect, theme }: SelectionRectOverlayProps): ReactElement {
+  const minX = Math.min(rect.x0, rect.x1);
+  const minY = Math.min(rect.y0, rect.y1);
+  const width = Math.abs(rect.x1 - rect.x0);
+  const height = Math.abs(rect.y1 - rect.y0);
   return (
-    <svg viewBox="0 0 24 24" width={20} height={20}>
-      <path d={ICON_PATHS[name]} fill="currentColor" />
-    </svg>
+    <rect
+      x={minX}
+      y={minY}
+      width={width}
+      height={height}
+      {...theme.selectionRect}
+      style={{ pointerEvents: 'none' }}
+    />
   );
 }

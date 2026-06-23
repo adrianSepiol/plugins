@@ -14,9 +14,9 @@
 import { ReactElement, useReducer } from 'react';
 import { Box, Button, Divider } from '@mui/material';
 import { produce } from 'immer';
-import { NodeSpec, WeathermapOptionsEditorProps } from '../types/weathermap-types';
-import { editorReducer, INITIAL_EDITOR_STATE } from '../utils/editorReducer';
-import { DEFAULT_NODE_SIZE } from './NodeRenderer';
+import { NodeSpec, WeathermapOptionsEditorProps } from '../../types/weathermap-types';
+import { editorReducer, INITIAL_EDITOR_STATE } from '../../utils/editorReducer';
+import { DEFAULT_NODE_SIZE } from '../node/NodeRenderer';
 import { NodePropertiesPanel } from './NodePropertiesPanel';
 import { EditorCanvas } from './EditorCanvas';
 

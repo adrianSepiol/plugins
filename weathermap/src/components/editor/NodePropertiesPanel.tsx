@@ -15,9 +15,9 @@ import { ReactElement } from 'react';
 import { Box, MenuItem, Stack, TextField, ToggleButton, ToggleButtonGroup, Tooltip, Typography } from '@mui/material';
 import { OptionsColorPicker } from '@perses-dev/components';
 import { useQueryCountContext } from '@perses-dev/plugin-system';
-import { NodeSpec } from '../types/weathermap-types';
-import { ICON_PATHS } from '../utils/icons';
-import { IconPreview } from './IconPreview';
+import { NodeSpec } from '../../types/weathermap-types';
+import { ICON_PATHS } from '../../utils/icons';
+import { IconPreview } from '../node/IconPreview';
 
 const ICON_NAMES = Object.keys(ICON_PATHS);
 

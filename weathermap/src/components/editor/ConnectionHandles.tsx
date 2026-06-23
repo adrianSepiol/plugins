@@ -12,8 +12,8 @@
 // limitations under the License.
 
 import { ReactElement } from 'react';
-import { NodeSpec, AnchorPoint } from '../types/weathermap-types';
-import { ANCHOR_KEYS, anchorPosition } from '../utils/edgeUtils';
+import { NodeSpec, AnchorPoint } from '../../types/weathermap-types';
+import { ANCHOR_KEYS, anchorPosition } from '../../utils/edgeUtils';
 
 const CROSS_HALF = 6;
 

@@ -13,15 +13,15 @@
 
 import React, { KeyboardEvent, PointerEvent, ReactElement } from 'react';
 import { produce } from 'immer';
-import { AnchorPoint, WeathermapOptions } from '../types/weathermap-types';
-import { anchorPosition, snapTarget } from '../utils/edgeUtils';
-import { nodeBBox } from '../utils/resizeUtils';
-import { getEditorTheme } from '../utils/editorTheme';
-import { EditorAction, EditorState } from '../utils/editorReducer';
-import { computeSelectionFromRect } from '../utils/selectionUtils';
-import { useZoom } from '../hooks/useZoom';
-import { createResizeHandlers } from '../utils/resizeHandlers';
-import { createEdgeHandlers } from '../utils/edgeHandlers';
+import { AnchorPoint, WeathermapOptions } from '../../types/weathermap-types';
+import { anchorPosition, snapTarget } from '../../utils/edgeUtils';
+import { nodeBBox } from '../../utils/resizeUtils';
+import { getEditorTheme } from '../../utils/editorTheme';
+import { EditorAction, EditorState } from '../../utils/editorReducer';
+import { computeSelectionFromRect } from '../../utils/selectionUtils';
+import { useZoom } from '../../hooks/useZoom';
+import { createResizeHandlers } from '../../utils/resizeHandlers';
+import { createEdgeHandlers } from '../../utils/edgeHandlers';
 import { EditorEdge } from './EditorEdge';
 import { EditorNode } from './EditorNode';
 import { SelectionBoundingBox } from './SelectionBoundingBox';
