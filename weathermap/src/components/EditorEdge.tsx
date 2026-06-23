@@ -12,9 +12,9 @@
 // limitations under the License.
 
 import { PointerEvent, ReactElement } from 'react';
-import { AnchorPoint, EdgeSpec, NodeSpec } from '../weathermap-types';
-import { edgeEndpoints, shortenLine } from '../edgeUtils';
-import { EditorTheme } from './editorTheme';
+import { AnchorPoint, EdgeSpec, NodeSpec } from '../types/weathermap-types';
+import { edgeEndpoints, shortenLine } from '../utils/edgeUtils';
+import { EditorTheme } from '../utils/editorTheme';
 
 interface EditorEdgeProps {
   edge: EdgeSpec;

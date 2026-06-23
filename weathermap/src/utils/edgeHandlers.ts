@@ -13,14 +13,14 @@
 
 import React, { PointerEvent } from 'react';
 import { produce } from 'immer';
-import type { AnchorPoint, NodeSpec, EdgeSpec, WeathermapOptions } from '../weathermap-types';
-import { edgeEndpoints, pointInsideNode, snapTarget } from '../edgeUtils';
-import type { DragEdge } from '../shared/types';
-import type { EditorAction } from './editorReducer';
+import type { AnchorPoint, NodeSpec, EdgeSpec, WeathermapOptions } from '../types/weathermap-types';
+import { edgeEndpoints, pointInsideNode, snapTarget } from '../utils/edgeUtils';
+import type { DragEdge } from '../types/editor-types';
+import type { EditorAction } from '../utils/editorReducer';
 
 const SNAP_RADIUS = 20;
 
-export interface UseEdgeHandlersOptions {
+export interface EdgeHandlersOptions {
   value: WeathermapOptions;
   onChange: (v: WeathermapOptions) => void;
   dispatch: React.Dispatch<EditorAction>;
@@ -30,7 +30,7 @@ export interface UseEdgeHandlersOptions {
   toSvgPoint: (event: React.PointerEvent<SVGSVGElement>) => { x: number; y: number };
 }
 
-export interface UseEdgeHandlers {
+export interface EdgeHandlers {
   onCrossDragStart: (nodeId: string, anchor: AnchorPoint, x: number, y: number) => void;
   commitEdgeDrag: (event: React.PointerEvent<SVGSVGElement>, dragEdge: DragEdge) => void;
   onEdgeEndpointPointerDown: (
@@ -44,7 +44,7 @@ export interface UseEdgeHandlers {
   ) => void;
 }
 
-export function useEdgeHandlers({
+export function createEdgeHandlers({
   value,
   onChange,
   dispatch,
@@ -52,7 +52,7 @@ export function useEdgeHandlers({
   nodeById,
   edgeById,
   toSvgPoint,
-}: UseEdgeHandlersOptions): UseEdgeHandlers {
+}: EdgeHandlersOptions): EdgeHandlers {
   function updateExistingEdge(
     dragEdge: DragEdge,
     pt: { x: number; y: number },

@@ -13,15 +13,14 @@
 
 import { PointerEvent } from 'react';
 import { produce } from 'immer';
-import type { NodeSpec, EdgeSpec, WeathermapOptions } from '../weathermap-types';
-import { DEFAULT_NODE_SIZE } from '../node/WeathermapNode';
-import type { MultiResizeDrag, ResizeHandleId } from '../shared/types';
-import { HANDLE_POSITIONS, handlePosition, nodeBBox, OPPOSITE_HANDLE } from '../shared/resizeUtils';
-import type { EditorAction } from './editorReducer';
+import type { NodeSpec, EdgeSpec, WeathermapOptions } from '../types/weathermap-types';
+import type { MultiResizeDrag, ResizeHandleId } from '../types/editor-types';
+import { HANDLE_POSITIONS, handlePosition, nodeBBox, OPPOSITE_HANDLE } from '../utils/resizeUtils';
+import type { EditorAction } from '../utils/editorReducer';
 
 const MIN_NODE_SIZE = 8;
 
-export interface UseResizeHandlersOptions {
+export interface ResizeHandlersOptions {
   value: WeathermapOptions;
   onChange: (v: WeathermapOptions) => void;
   dispatch: React.Dispatch<EditorAction>;
@@ -29,18 +28,18 @@ export interface UseResizeHandlersOptions {
   selectedFloatingEdges: EdgeSpec[];
 }
 
-export interface UseResizeHandlers {
+export interface ResizeHandlers {
   applyResize: (point: { x: number; y: number }, multiResizeDrag: MultiResizeDrag) => void;
   onResizeHandlePointerDown: (event: PointerEvent<SVGCircleElement>, handleId: ResizeHandleId) => void;
 }
 
-export function useResizeHandlers({
+export function createResizeHandlers({
   value,
   onChange,
   dispatch,
   selectedNodes,
   selectedFloatingEdges,
-}: UseResizeHandlersOptions): UseResizeHandlers {
+}: ResizeHandlersOptions): ResizeHandlers {
   function applyResize(point: { x: number; y: number }, multiResizeDrag: MultiResizeDrag): void {
     const { handleId, fixedX, fixedY, origBBox, origNodes, origEdges } = multiResizeDrag;
 

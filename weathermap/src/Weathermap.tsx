@@ -1,8 +1,8 @@
 import { PanelPlugin } from '@perses-dev/plugin-system';
-import { WeathermapComponent } from './panel/WeathermapComponent';
-import { WeathermapOptions, WeathermapProps } from './weathermap-types';
-import { WeathermapSettingsEditor } from './settings/WeathermapSettingsEditor';
-import { WeathermapNodeEditor } from './editor/WeathermapNodeEditor';
+import { WeathermapComponent } from './components/WeathermapComponent';
+import { WeathermapOptions, WeathermapProps } from './types/weathermap-types';
+import { WeathermapSettingsEditor } from './components/WeathermapSettingsEditor';
+import { WeathermapNodeEditor } from './components/WeathermapNodeEditor';
 
 export const Weathermap: PanelPlugin<WeathermapOptions, WeathermapProps> = {
   PanelComponent: WeathermapComponent,

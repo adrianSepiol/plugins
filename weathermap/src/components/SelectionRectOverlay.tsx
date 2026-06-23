@@ -12,30 +12,26 @@
 // limitations under the License.
 
 import { ReactElement } from 'react';
-import { DragEdge } from '../shared/types';
-import { shortenLine } from '../edgeUtils';
-import { EditorTheme } from './editorTheme';
+import { SelectionRect } from '../types/editor-types';
+import { EditorTheme } from '../utils/editorTheme';
 
-interface DragEdgeLineProps {
-  dragEdge: DragEdge;
-  arrowShorten: number;
-  markerUrl: string;
+interface SelectionRectOverlayProps {
+  rect: SelectionRect;
   theme: EditorTheme;
 }
 
-export function DragEdgeLine({ dragEdge, arrowShorten, markerUrl, theme }: DragEdgeLineProps): ReactElement {
-  const shortened = shortenLine(
-    { x1: dragEdge.x1, y1: dragEdge.y1, x2: dragEdge.x2, y2: dragEdge.y2 },
-    dragEdge.snapTargetId ? arrowShorten : 0
-  );
+export function SelectionRectOverlay({ rect, theme }: SelectionRectOverlayProps): ReactElement {
+  const minX = Math.min(rect.x0, rect.x1);
+  const minY = Math.min(rect.y0, rect.y1);
+  const width = Math.abs(rect.x1 - rect.x0);
+  const height = Math.abs(rect.y1 - rect.y0);
   return (
-    <line
-      x1={shortened.x1}
-      y1={shortened.y1}
-      x2={shortened.x2}
-      y2={shortened.y2}
-      {...theme.dragEdge}
-      markerEnd={markerUrl}
+    <rect
+      x={minX}
+      y={minY}
+      width={width}
+      height={height}
+      {...theme.selectionRect}
       style={{ pointerEvents: 'none' }}
     />
   );

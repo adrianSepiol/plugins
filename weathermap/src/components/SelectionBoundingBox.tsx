@@ -12,9 +12,9 @@
 // limitations under the License.
 
 import { PointerEvent, ReactElement } from 'react';
-import { BoundingBox, ResizeHandleId } from '../shared/types';
-import { HANDLE_POSITIONS, handlePosition, RESIZE_CURSORS } from '../shared/resizeUtils';
-import { EditorTheme } from './editorTheme';
+import { BoundingBox, ResizeHandleId } from '../types/editor-types';
+import { HANDLE_POSITIONS, handlePosition, RESIZE_CURSORS } from '../utils/resizeUtils';
+import { EditorTheme } from '../utils/editorTheme';
 
 interface SelectionBoundingBoxProps {
   bbox: BoundingBox;

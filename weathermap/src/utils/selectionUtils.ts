@@ -11,8 +11,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-import type { EdgeSpec, NodeSpec } from '../weathermap-types';
-import type { SelectionRect } from '../shared/types';
+import type { EdgeSpec, NodeSpec } from '../types/weathermap-types';
+import type { SelectionRect } from '../types/editor-types';
 
 export function computeSelectionFromRect(rect: SelectionRect, nodes: NodeSpec[], edges: EdgeSpec[]): Set<string> {
   const minX = Math.min(rect.x0, rect.x1);

@@ -12,8 +12,8 @@
 // limitations under the License.
 
 import { ReactElement } from 'react';
-import { NodeSpec } from '../weathermap-types';
-import { ICON_PATHS } from '../icons';
+import { NodeSpec } from '../types/weathermap-types';
+import { ICON_PATHS } from '../utils/icons';
 
 export const ICON_FILL_RATIO = 0.6;
 export const CORNER_RADIUS_RATIO = 0.2;

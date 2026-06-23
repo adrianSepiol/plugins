@@ -11,8 +11,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-import type { DragEdge, MultiResizeDrag, SelectionRect, ResizeHandleId } from '../shared/types';
-import { AnchorPoint } from '../weathermap-types';
+import type { DragEdge, MultiResizeDrag, SelectionRect, ResizeHandleId } from '../types/editor-types';
+import { AnchorPoint } from '../types/weathermap-types';
 
 export type EditorMode =
   | { type: 'idle' }

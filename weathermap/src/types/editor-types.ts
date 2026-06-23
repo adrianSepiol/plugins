@@ -11,7 +11,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-import { AnchorPoint } from '../weathermap-types';
+import { AnchorPoint } from './weathermap-types';
 
 export interface SelectionRect {
   x0: number;

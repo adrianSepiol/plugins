@@ -14,10 +14,10 @@
 import { ReactElement, useReducer } from 'react';
 import { Box, Button, Divider } from '@mui/material';
 import { produce } from 'immer';
-import { NodeSpec, WeathermapOptionsEditorProps } from '../weathermap-types';
-import { DEFAULT_NODE_SIZE } from '../node';
+import { NodeSpec, WeathermapOptionsEditorProps } from '../types/weathermap-types';
+import { editorReducer, INITIAL_EDITOR_STATE } from '../utils/editorReducer';
+import { DEFAULT_NODE_SIZE } from './WeathermapNode';
 import { NodePropertiesPanel } from './NodePropertiesPanel';
-import { editorReducer, INITIAL_EDITOR_STATE } from './editorReducer';
 import { WeathermapCanvas } from './WeathermapCanvas';
 
 const CANVAS_WIDTH = 600;

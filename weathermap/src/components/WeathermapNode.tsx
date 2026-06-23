@@ -12,7 +12,7 @@
 // limitations under the License.
 
 import { ReactElement } from 'react';
-import { NodeSpec } from '../weathermap-types';
+import { NodeSpec } from '../types/weathermap-types';
 import { RectangleNode } from './RectangleNode';
 import { IconNode } from './IconNode';
 import { TextNode } from './TextNode';

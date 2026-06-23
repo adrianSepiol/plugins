@@ -13,20 +13,20 @@
 
 import React, { KeyboardEvent, PointerEvent, ReactElement } from 'react';
 import { produce } from 'immer';
-import { AnchorPoint, WeathermapOptions } from '../weathermap-types';
-import { anchorPosition, snapTarget } from '../edgeUtils';
-import { nodeBBox } from '../shared/resizeUtils';
-import { getEditorTheme } from './editorTheme';
-import { EditorAction, EditorState } from './editorReducer';
+import { AnchorPoint, WeathermapOptions } from '../types/weathermap-types';
+import { anchorPosition, snapTarget } from '../utils/edgeUtils';
+import { nodeBBox } from '../utils/resizeUtils';
+import { getEditorTheme } from '../utils/editorTheme';
+import { EditorAction, EditorState } from '../utils/editorReducer';
+import { computeSelectionFromRect } from '../utils/selectionUtils';
+import { useZoom } from '../hooks/useZoom';
+import { createResizeHandlers } from '../utils/resizeHandlers';
+import { createEdgeHandlers } from '../utils/edgeHandlers';
 import { EditorEdge } from './EditorEdge';
 import { EditorNode } from './EditorNode';
 import { SelectionBoundingBox } from './SelectionBoundingBox';
 import { DragEdgeLine } from './DragEdgeLine';
 import { SelectionRectOverlay } from './SelectionRectOverlay';
-import { useZoom } from './useZoom';
-import { useResizeHandlers } from './useResizeHandlers';
-import { useEdgeHandlers } from './useEdgeHandlers';
-import { computeSelectionFromRect } from './selectionUtils';
 
 const CANVAS_WIDTH = 600;
 const CANVAS_HEIGHT = 400;
@@ -86,7 +86,7 @@ export function WeathermapCanvas({ value, onChange, state, dispatch }: Weatherma
   const markerUrl = `url(#${MARKER_ID})`;
   const arrowShorten = ARROW_SHORTEN / transform.k;
 
-  const { applyResize, onResizeHandlePointerDown } = useResizeHandlers({
+  const { applyResize, onResizeHandlePointerDown } = createResizeHandlers({
     value,
     onChange,
     dispatch,
@@ -94,7 +94,7 @@ export function WeathermapCanvas({ value, onChange, state, dispatch }: Weatherma
     selectedFloatingEdges,
   });
 
-  const { onCrossDragStart, commitEdgeDrag, onEdgeEndpointPointerDown } = useEdgeHandlers({
+  const { onCrossDragStart, commitEdgeDrag, onEdgeEndpointPointerDown } = createEdgeHandlers({
     value,
     onChange,
     dispatch,

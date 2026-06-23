@@ -12,8 +12,8 @@
 // limitations under the License.
 
 import { ReactElement } from 'react';
-import { NodeSpec } from '../weathermap-types';
-import { ICON_PATHS } from '../icons';
+import { NodeSpec } from '../types/weathermap-types';
+import { ICON_PATHS } from '../utils/icons';
 
 const DEFAULT_ICON_COLOR = '#1976d2';
 
