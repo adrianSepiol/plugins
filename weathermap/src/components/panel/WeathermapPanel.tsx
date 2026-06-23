@@ -13,7 +13,7 @@
 
 import { ReactElement, useState, useRef, useLayoutEffect, useCallback, useMemo } from 'react';
 import { TimeSeries, ThresholdOptions } from '@perses-dev/core';
-import { useChartsTheme } from '@perses-dev/components';
+import { FormatOptions, formatValue, useChartsTheme } from '@perses-dev/components';
 import { select } from 'd3-selection';
 import { zoom, ZoomTransform, zoomIdentity } from 'd3-zoom';
 import { WeathermapOptions, WeathermapProps } from '../../types/weathermap-types';
@@ -25,11 +25,11 @@ const MARKER_ID = 'wm-arrow-panel';
 const ARROW_SHORTEN = 6;
 const BIDIR_GAP = 2;
 
-function interpolateLabel(template: string, series: TimeSeries): string {
+function interpolateLabel(template: string, series: TimeSeries, format: FormatOptions | undefined): string {
   const lastValue = series.values.length > 0 ? series.values[series.values.length - 1]?.[1] : null;
   const labels: Record<string, string> = { ...series.labels };
   if (lastValue !== null && lastValue !== undefined) {
-    labels['value'] = String(lastValue);
+    labels['value'] = formatValue(lastValue, format);
   }
   return template.replace(/\{\{\s*(.+?)\s*\}\}/g, (_match, key: string) => labels[key.trim()] ?? '');
 }
@@ -145,7 +145,7 @@ export function WeathermapPanel(props: WeathermapProps): ReactElement | null {
             const series = seriesByQueryIndex.get(queryIndex);
             if (!series) return null;
             const tmpl = template ?? '{{value}}';
-            return interpolateLabel(tmpl, series);
+            return interpolateLabel(tmpl, series, spec.format);
           }
 
           if (edge.bidirectional) {
@@ -224,7 +224,7 @@ export function WeathermapPanel(props: WeathermapProps): ReactElement | null {
             const series = seriesByQueryIndex.get(node.queryIndex);
             if (series) {
               if (node.label) {
-                labelOverride = interpolateLabel(node.label, series);
+                labelOverride = interpolateLabel(node.label, series, spec.format);
               }
               if (node.colorMode === 'fixed' && node.color) {
                 fillOverride = node.color;

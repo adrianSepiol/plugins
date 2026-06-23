@@ -1,4 +1,5 @@
 import { TimeSeriesData, ThresholdOptions } from '@perses-dev/core';
+import { FormatOptions } from '@perses-dev/components';
 import { PanelProps, LegendSpecOptions, OptionsEditorProps } from '@perses-dev/plugin-system';
 
 export type QueryData = TimeSeriesData; // Type of data returned by a query plugin and supported by this plugin
@@ -49,6 +50,7 @@ export interface EdgeThresholdStep {
 export interface WeathermapOptions {
   legend?: LegendSpecOptions;
   thresholds?: ThresholdOptions;
+  format?: FormatOptions;
   edgeThresholdWidths?: EdgeThresholdStep[];
   edgeDefaultStrokeWidth?: number;
   querySettings?: QuerySettingsOptions;

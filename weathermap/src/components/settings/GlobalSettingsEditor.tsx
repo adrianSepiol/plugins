@@ -12,6 +12,8 @@
 // limitations under the License.
 
 import {
+  FormatControls,
+  FormatControlsProps,
   OptionsEditorGrid,
   OptionsEditorColumn,
   ThresholdsEditor,
@@ -34,10 +36,15 @@ export function GlobalSettingsEditor(props: GlobalSettingsEditorProps): ReactEle
     onChange({ ...value, thresholds });
   };
 
+  const handleFormatChange: FormatControlsProps['onChange'] = (format) => {
+    onChange({ ...value, format });
+  };
+
   return (
     <OptionsEditorGrid>
       <OptionsEditorColumn>
         <LegendOptionsEditor value={value.legend} onChange={handleLegendChange} />
+        <FormatControls value={value.format ?? { unit: 'decimal' }} onChange={handleFormatChange} />
       </OptionsEditorColumn>
       <OptionsEditorColumn>
         <ThresholdsEditor hideDefault thresholds={value.thresholds} onChange={handleThresholdsChange} />
