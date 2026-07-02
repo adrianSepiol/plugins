@@ -23,7 +23,6 @@ interface EditorNodeProps {
   isSelected: boolean;
   snapTarget: boolean;
   isDragging: boolean;
-  k: number;
   theme: EditorTheme;
   onPointerDown: (event: PointerEvent<SVGRectElement>) => void;
   onPointerMove: (event: PointerEvent<SVGRectElement>) => void;
@@ -38,7 +37,6 @@ export function EditorNode({
   isSelected,
   snapTarget,
   isDragging,
-  k,
   theme,
   onPointerDown,
   onPointerMove,
@@ -57,9 +55,7 @@ export function EditorNode({
           onPointerMove,
         }}
       />
-      {isHovered && !isSelected && !isDragging && (
-        <ConnectionHandles node={node} k={k} onDragStart={onCrossDragStart} />
-      )}
+      {isHovered && !isSelected && !isDragging && <ConnectionHandles node={node} onDragStart={onCrossDragStart} />}
     </g>
   );
 }

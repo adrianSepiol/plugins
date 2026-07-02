@@ -13,7 +13,7 @@
 
 import { ReactElement } from 'react';
 
-const FONT_SIZE = 7;
+const FONT_SIZE = 12;
 const PADDING_X = 4;
 const PADDING_Y = 2;
 const HEIGHT = FONT_SIZE + PADDING_Y * 2;

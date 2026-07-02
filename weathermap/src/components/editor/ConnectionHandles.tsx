@@ -15,16 +15,16 @@ import { ReactElement } from 'react';
 import { NodeSpec, AnchorPoint } from '../../types/weathermap-types';
 import { ANCHOR_KEYS, anchorPosition } from '../../utils/edgeUtils';
 
-const CROSS_HALF = 6;
+const CROSS_LENGTH = 6;
 
 interface ConnectionHandlesProps {
   node: NodeSpec;
-  k: number;
   onDragStart: (anchor: AnchorPoint, x: number, y: number) => void;
 }
 
-export function ConnectionHandles({ node, k, onDragStart }: ConnectionHandlesProps): ReactElement {
-  const armLen = CROSS_HALF / k;
+export function ConnectionHandles({ node, onDragStart }: ConnectionHandlesProps): ReactElement {
+  const armLen = CROSS_LENGTH;
+
   return (
     <>
       {ANCHOR_KEYS.map((anchor) => {
@@ -39,10 +39,10 @@ export function ConnectionHandles({ node, k, onDragStart }: ConnectionHandlesPro
               onDragStart(anchor, pos.x, pos.y);
             }}
           >
-            <circle r={armLen * 2} fill="transparent" />
-            <line x1={-armLen} y1={0} x2={armLen} y2={0} stroke="#2196f3" strokeWidth={1.5 / k} />
-            <line x1={0} y1={-armLen} x2={0} y2={armLen} stroke="#2196f3" strokeWidth={1.5 / k} />
-            <circle r={2 / k} fill="#2196f3" />
+            <circle r={armLen} fill="transparent" />
+            <line x1={-armLen / 2} y1={0} x2={armLen / 2} y2={0} stroke="#2196f3" strokeWidth={1.5} />
+            <line x1={0} y1={-armLen / 2} x2={0} y2={armLen / 2} stroke="#2196f3" strokeWidth={1.5} />
+            <circle r={2} fill="#2196f3" />
           </g>
         );
       })}

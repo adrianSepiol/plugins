@@ -15,10 +15,17 @@ import { PointerEvent, useCallback, useMemo, useRef, useState } from 'react';
 import { select } from 'd3-selection';
 import { zoom, zoomIdentity, ZoomTransform } from 'd3-zoom';
 
+const FIT_PADDING = 40; // canvas-coordinate padding around the node bounding box
+
 export interface UseZoomResult {
   applyZoomBehaviour: (node: SVGSVGElement) => void;
   transform: ZoomTransform;
   resetPan: () => void;
+  fitView: (
+    bbox: { minX: number; minY: number; maxX: number; maxY: number },
+    canvasWidth: number,
+    canvasHeight: number
+  ) => void;
   toSvgPoint: (event: PointerEvent<SVGSVGElement>) => { x: number; y: number };
 }
 
@@ -31,7 +38,10 @@ export function useZoom(): UseZoomResult {
   const applyZoomBehaviour = useCallback(
     (node: SVGSVGElement): void => {
       nodeRef.current = node;
-      zoomBehavior.on('zoom', ({ transform: t }: { transform: ZoomTransform }) => setTransform(t));
+      zoomBehavior.on('zoom', ({ transform: t }: { transform: ZoomTransform }) => {
+        console.log('[useZoom] zoom event — transform:', t.toString(), new Error().stack?.split('\n')[2]?.trim());
+        setTransform(t);
+      });
       zoomBehavior.filter((event: Event) => {
         if (event.type === 'dblclick') {
           return false;
@@ -53,6 +63,26 @@ export function useZoom(): UseZoomResult {
     select<SVGSVGElement, unknown>(nodeRef.current).call(zoomBehavior.transform, zoomIdentity);
   }, [zoomBehavior]);
 
+  const fitView = useCallback(
+    (
+      bbox: { minX: number; minY: number; maxX: number; maxY: number },
+      canvasWidth: number,
+      canvasHeight: number
+    ): void => {
+      if (!nodeRef.current) {
+        return;
+      }
+      const contentW = bbox.maxX - bbox.minX + FIT_PADDING * 2;
+      const contentH = bbox.maxY - bbox.minY + FIT_PADDING * 2;
+      const scale = Math.min(canvasWidth / contentW, canvasHeight / contentH, 1);
+      const tx = canvasWidth / 2 - (scale * (bbox.minX + bbox.maxX)) / 2;
+      const ty = canvasHeight / 2 - (scale * (bbox.minY + bbox.maxY)) / 2;
+      const t = zoomIdentity.translate(tx, ty).scale(scale);
+      select<SVGSVGElement, unknown>(nodeRef.current).call(zoomBehavior.transform, t);
+    },
+    [zoomBehavior]
+  );
+
   const toSvgPoint = useCallback(
     (event: PointerEvent<SVGSVGElement>): { x: number; y: number } => {
       const rect = nodeRef.current!.getBoundingClientRect();
@@ -63,5 +93,5 @@ export function useZoom(): UseZoomResult {
     [transform]
   );
 
-  return { applyZoomBehaviour, transform, resetPan, toSvgPoint };
+  return { applyZoomBehaviour, transform, resetPan, fitView, toSvgPoint };
 }

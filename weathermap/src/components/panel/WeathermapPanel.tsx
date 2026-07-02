@@ -11,19 +11,20 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-import { ReactElement, useState, useRef, useLayoutEffect, useCallback, useMemo } from 'react';
-import { TimeSeries, ThresholdOptions } from '@perses-dev/core';
+import React, { ReactElement, useCallback, useMemo } from 'react';
+import { ThresholdOptions, TimeSeries } from '@perses-dev/core';
 import { FormatOptions, formatValue, useChartsTheme } from '@perses-dev/components';
-import { select } from 'd3-selection';
-import { zoom, ZoomTransform, zoomIdentity } from 'd3-zoom';
+import { replaceVariablesInString, useAllVariableValues } from '@perses-dev/plugin-system';
 import { WeathermapOptions, WeathermapProps } from '../../types/weathermap-types';
-import { edgeEndpoints, midpoint, offsetLine, shortenLine, strokeWidthFromThresholds } from '../../utils/edgeUtils';
+import { edgeEndpoints, strokeWidthFromThresholds } from '../../utils/edgeUtils';
+import { nodeBBox } from '../../utils/resizeUtils';
+import { useZoom } from '../../hooks/useZoom';
 import { NodeRenderer } from '../node/NodeRenderer';
 import { EdgeLabel } from '../node/EdgeLabel';
+import { EdgeLines, edgeLabelPoints, LineStyle } from '../node/EdgeLines';
+import { ThresholdLegend } from './ThresholdLegend';
 
-const MARKER_ID = 'wm-arrow-panel';
-const ARROW_SHORTEN = 6;
-const BIDIR_GAP = 2;
+const NS_PREFIX = 'wm-arrow-panel';
 
 function interpolateLabel(template: string, series: TimeSeries, format: FormatOptions | undefined): string {
   const lastValue = series.values.length > 0 ? series.values[series.values.length - 1]?.[1] : null;
@@ -49,11 +50,13 @@ function colorFromThresholds(value: number, thresholds: ThresholdOptions, palett
 
 function resolveEdgeStyle(
   queryIndex: number | undefined,
+  thicknessMode: 'fixed' | 'threshold' | undefined,
+  edgeStrokeWidth: number | undefined,
   seriesByQueryIndex: Map<number, TimeSeries>,
   spec: WeathermapOptions,
   paletteColors: string[]
 ): { stroke: string; strokeWidth: number } {
-  const defaultWidth = spec.edgeDefaultStrokeWidth ?? 2;
+  const defaultWidth = edgeStrokeWidth ?? spec.edgeDefaultStrokeWidth ?? 2;
   if (queryIndex === undefined) {
     return { stroke: 'currentColor', strokeWidth: defaultWidth };
   }
@@ -68,9 +71,10 @@ function resolveEdgeStyle(
   }
 
   const stroke = spec.thresholds ? colorFromThresholds(lastValue, spec.thresholds, paletteColors) : 'currentColor';
-  const strokeWidth = spec.edgeThresholdWidths?.length
-    ? strokeWidthFromThresholds(lastValue, spec.edgeThresholdWidths, defaultWidth)
-    : defaultWidth;
+  const strokeWidth =
+    thicknessMode === 'threshold' && spec.edgeThresholdWidths?.length
+      ? strokeWidthFromThresholds(lastValue, spec.edgeThresholdWidths, defaultWidth)
+      : defaultWidth;
   return { stroke, strokeWidth };
 }
 
@@ -90,55 +94,57 @@ export function WeathermapPanel(props: WeathermapProps): ReactElement | null {
     return map;
   }, [queryResults]);
 
-  const [transform, setTransform] = useState<ZoomTransform>(zoomIdentity);
-  const canvasRef = useRef<SVGSVGElement | null>(null);
+  const { applyZoomBehaviour, transform, fitView } = useZoom();
+  const variableValues = useAllVariableValues();
+
+  const handleNodeClick = useCallback(
+    (link: string) => {
+      window.open(replaceVariablesInString(link, variableValues), '_blank', 'noopener,noreferrer');
+    },
+    [variableValues]
+  );
+
   const width = contentDimensions?.width ?? 600;
   const height = contentDimensions?.height ?? 400;
   const nodeById = new Map(nodes.map((n) => [n.id, n]));
-  const zoomBehavior = useMemo(() => zoom<SVGSVGElement, unknown>(), []);
-  const updateTransform = useCallback(({ transform: t }: { transform: ZoomTransform }) => setTransform(t), []);
-
-  useLayoutEffect(() => {
-    if (!canvasRef.current) {
-      return;
-    }
-    zoomBehavior.on('zoom', updateTransform);
-    zoomBehavior.filter((event: Event) => {
-      return event.type !== 'dblclick';
-    });
-    select<SVGSVGElement, unknown>(canvasRef.current).call(zoomBehavior);
-  }, [zoomBehavior, canvasRef, updateTransform]);
-
-  const resetPan = useCallback(() => {
-    if (!canvasRef.current) {
-      return;
-    }
-    select<SVGSVGElement, unknown>(canvasRef.current).call(zoomBehavior.transform, zoomIdentity);
-  }, [zoomBehavior]);
-
   const paletteColors = chartsTheme.thresholds.palette;
+
+  const handleDoubleClick = useCallback(() => {
+    const bbox = nodeBBox(nodes);
+    if (bbox) {
+      fitView(bbox, width, height);
+    }
+  }, [fitView, nodes, width, height]);
+
+  const showLegend = spec.legend !== undefined && spec.thresholds !== undefined;
+  const legendPosition = spec.legend?.position ?? 'bottom';
+  const LEGEND_MARGIN = 8;
+  const legendX = legendPosition === 'right' ? width - 118 - LEGEND_MARGIN : LEGEND_MARGIN;
+  const legendY =
+    legendPosition === 'right' ? LEGEND_MARGIN : height - ((spec.thresholds?.steps?.length ?? 0) + 1) * 18 - 24;
 
   return (
     <svg
-      ref={canvasRef}
+      ref={applyZoomBehaviour}
       width={width}
       height={height}
       style={{ display: 'block', cursor: 'grab' }}
-      onDoubleClick={resetPan}
+      onDoubleClick={handleDoubleClick}
     >
-      <defs>
-        <marker id={MARKER_ID} markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto">
-          <path d="M0,0 L0,6 L8,3 z" fill="currentColor" fillOpacity={0.8} />
-        </marker>
-      </defs>
-
-      <g transform={`translate(${transform.x},${transform.y}) scale(${transform.k})`}>
+      {spec.backgroundImage && (
+        <image
+          href={spec.backgroundImage}
+          x={0}
+          y={0}
+          width={width}
+          height={height}
+          preserveAspectRatio={spec.backgroundImageFit === 'stretch' ? 'none' : 'xMidYMid meet'}
+        />
+      )}
+      <g transform={transform.toString()}>
         {edges.map((edge, i) => {
           const pts = edgeEndpoints(edge, nodeById);
           if (!pts) return null;
-          const arrowPx = ARROW_SHORTEN / transform.k;
-          const lineOffset = 4 / transform.k;
-          const markerUrl = `url(#${MARKER_ID})`;
 
           function resolveLabel(queryIndex: number | undefined, template: string | undefined): string | null {
             if (queryIndex === undefined) return null;
@@ -148,70 +154,58 @@ export function WeathermapPanel(props: WeathermapProps): ReactElement | null {
             return interpolateLabel(tmpl, series, spec.format);
           }
 
-          if (edge.bidirectional) {
-            const mid = midpoint(pts);
-            const gapPx = BIDIR_GAP / transform.k;
+          const fwdStyle = resolveEdgeStyle(
+            edge.sourceQueryIndex,
+            edge.thicknessMode,
+            edge.strokeWidth,
+            seriesByQueryIndex,
+            spec,
+            paletteColors
+          );
+          const bwdStyle = resolveEdgeStyle(
+            edge.targetQueryIndex,
+            edge.thicknessMode,
+            edge.strokeWidth,
+            seriesByQueryIndex,
+            spec,
+            paletteColors
+          );
+          const scaledFwdStyle: LineStyle = {
+            stroke: fwdStyle.stroke,
+            strokeWidth: fwdStyle.strokeWidth / transform.k,
+            strokeOpacity: 0.8,
+          };
+          const scaledBwdStyle: LineStyle = {
+            stroke: bwdStyle.stroke,
+            strokeWidth: bwdStyle.strokeWidth / transform.k,
+            strokeOpacity: 0.8,
+          };
 
-            // Forward half: from source anchor → midpoint (offset to one side)
-            const fwdHalf = offsetLine({ x1: pts.x1, y1: pts.y1, x2: mid.x, y2: mid.y }, lineOffset);
-            const fwdShortened = shortenLine(fwdHalf, arrowPx + gapPx / 2);
+          const labelPts = edgeLabelPoints(
+            pts,
+            edge.bidirectional ?? false,
+            transform.k,
+            scaledFwdStyle.strokeWidth,
+            scaledBwdStyle.strokeWidth
+          );
+          const fwdLabel = resolveLabel(edge.sourceQueryIndex, edge.sourceLabelTemplate);
+          const bwdLabel = edge.bidirectional ? resolveLabel(edge.targetQueryIndex, edge.targetLabelTemplate) : null;
 
-            // Backward half: from target anchor → midpoint (offset to other side, then reverse for arrow direction)
-            const bwdHalfRaw = offsetLine({ x1: pts.x2, y1: pts.y2, x2: mid.x, y2: mid.y }, -lineOffset);
-            const bwdShortened = shortenLine(bwdHalfRaw, arrowPx + gapPx / 2);
-
-            const fwdStyle = resolveEdgeStyle(edge.sourceQueryIndex, seriesByQueryIndex, spec, paletteColors);
-            const bwdStyle = resolveEdgeStyle(edge.targetQueryIndex, seriesByQueryIndex, spec, paletteColors);
-            const fwdLabel = resolveLabel(edge.sourceQueryIndex, edge.sourceLabelTemplate);
-            const bwdLabel = resolveLabel(edge.targetQueryIndex, edge.targetLabelTemplate);
-            const fwdLabelPt = midpoint(fwdShortened);
-            const bwdLabelPt = midpoint(bwdShortened);
-
-            return (
-              <g key={i}>
-                <line
-                  x1={fwdShortened.x1}
-                  y1={fwdShortened.y1}
-                  x2={fwdShortened.x2}
-                  y2={fwdShortened.y2}
-                  stroke={fwdStyle.stroke}
-                  strokeWidth={fwdStyle.strokeWidth / transform.k}
-                  strokeOpacity={0.8}
-                  markerEnd={markerUrl}
-                />
-                <line
-                  x1={bwdShortened.x1}
-                  y1={bwdShortened.y1}
-                  x2={bwdShortened.x2}
-                  y2={bwdShortened.y2}
-                  stroke={bwdStyle.stroke}
-                  strokeWidth={bwdStyle.strokeWidth / transform.k}
-                  strokeOpacity={0.8}
-                  markerEnd={markerUrl}
-                />
-                {fwdLabel && <EdgeLabel x={fwdLabelPt.x} y={fwdLabelPt.y} text={fwdLabel} k={transform.k} />}
-                {bwdLabel && <EdgeLabel x={bwdLabelPt.x} y={bwdLabelPt.y} text={bwdLabel} k={transform.k} />}
-              </g>
-            );
-          }
-
-          const shortened = shortenLine(pts, arrowPx);
-          const edgeStyle = resolveEdgeStyle(edge.sourceQueryIndex, seriesByQueryIndex, spec, paletteColors);
-          const label = resolveLabel(edge.sourceQueryIndex, edge.sourceLabelTemplate);
-          const mid = midpoint(pts);
           return (
             <g key={i}>
-              <line
-                x1={shortened.x1}
-                y1={shortened.y1}
-                x2={shortened.x2}
-                y2={shortened.y2}
-                stroke={edgeStyle.stroke}
-                strokeWidth={edgeStyle.strokeWidth / transform.k}
-                strokeOpacity={0.8}
-                markerEnd={markerUrl}
+              <EdgeLines
+                pts={pts}
+                bidirectional={edge.bidirectional ?? false}
+                nsPrefix={NS_PREFIX}
+                k={transform.k}
+                fwdStyle={scaledFwdStyle}
+                bwdStyle={scaledBwdStyle}
+                lineProps={{ style: { pointerEvents: 'none' } }}
               />
-              {label && <EdgeLabel x={mid.x} y={mid.y} text={label} k={transform.k} />}
+              {fwdLabel && <EdgeLabel x={labelPts.fwd.x} y={labelPts.fwd.y} text={fwdLabel} k={transform.k} />}
+              {bwdLabel && labelPts.bwd && (
+                <EdgeLabel x={labelPts.bwd.x} y={labelPts.bwd.y} text={bwdLabel} k={transform.k} />
+              )}
             </g>
           );
         })}
@@ -242,6 +236,9 @@ export function WeathermapPanel(props: WeathermapProps): ReactElement | null {
             <NodeRenderer
               key={node.id}
               node={node}
+              groupProps={
+                node.link ? { onClick: () => handleNodeClick(node.link!), style: { cursor: 'pointer' } } : undefined
+              }
               rectProps={{ strokeWidth: 2 / transform.k }}
               labelOverride={labelOverride}
               fillOverride={fillOverride}
@@ -249,6 +246,16 @@ export function WeathermapPanel(props: WeathermapProps): ReactElement | null {
           );
         })}
       </g>
+
+      {showLegend && (
+        <ThresholdLegend
+          thresholds={spec.thresholds!}
+          format={spec.format}
+          paletteColors={paletteColors}
+          x={legendX}
+          y={legendY}
+        />
+      )}
     </svg>
   );
 }

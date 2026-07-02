@@ -14,6 +14,7 @@
 import { ReactElement, SVGProps } from 'react';
 import { NodeSpec } from '../../types/weathermap-types';
 import { ICON_PATHS } from '../../utils/icons';
+import { labelAttrs } from '../../utils/labelPosition';
 
 const DEFAULT_ICON_COLOR = '#1976d2';
 
@@ -29,7 +30,7 @@ export interface IconNodeProps {
 export function IconNode({ node, nodeSize, half, displayLabel, fillOverride, rectProps }: IconNodeProps): ReactElement {
   const iconPath = node.icon ? ICON_PATHS[node.icon] : undefined;
   const iconScale = nodeSize / 24;
-  const labelOffset = half + 12;
+  const lAttrs = labelAttrs(half, node.labelPosition, node.labelPadding);
   const iconColor = fillOverride ?? DEFAULT_ICON_COLOR;
 
   return (
@@ -41,7 +42,6 @@ export function IconNode({ node, nodeSize, half, displayLabel, fillOverride, rec
         height={nodeSize}
         fill="transparent"
         stroke="transparent"
-        strokeWidth={2}
         {...rectProps}
       />
       {iconPath ? (
@@ -53,11 +53,11 @@ export function IconNode({ node, nodeSize, half, displayLabel, fillOverride, rec
       )}
       {displayLabel && (
         <text
-          y={labelOffset}
-          textAnchor="middle"
-          dominantBaseline="hanging"
+          x={lAttrs.x}
+          y={lAttrs.y}
+          textAnchor={lAttrs.textAnchor}
+          dominantBaseline={lAttrs.dominantBaseline}
           fill="currentColor"
-          fontSize={12}
           style={{ pointerEvents: 'none', userSelect: 'none' }}
         >
           {displayLabel}

@@ -11,7 +11,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-import React, { KeyboardEvent, PointerEvent, ReactElement } from 'react';
+import React, { KeyboardEvent, PointerEvent, ReactElement, useLayoutEffect, useRef } from 'react';
 import { produce } from 'immer';
 import { AnchorPoint, WeathermapOptions } from '../../types/weathermap-types';
 import { anchorPosition, snapTarget } from '../../utils/edgeUtils';
@@ -31,8 +31,7 @@ import { SelectionRectOverlay } from './SelectionRectOverlay';
 const CANVAS_WIDTH = 600;
 const CANVAS_HEIGHT = 400;
 const SNAP_RADIUS = 20;
-const ARROW_SHORTEN = 6;
-const MARKER_ID = 'wm-arrow-node-editor';
+const NS_PREFIX = 'wm-arrow-editor';
 
 // Returns true when the pointer event is a middle-mouse-button press, which
 // d3-zoom exclusively uses for panning — canvas interactions should ignore it.
@@ -55,12 +54,54 @@ interface EditorCanvasProps {
   onChange: (v: WeathermapOptions) => void;
   state: EditorState;
   dispatch: React.Dispatch<EditorAction>;
+  viewCenterRef?: React.MutableRefObject<() => { x: number; y: number }>;
 }
 
-export function EditorCanvas({ value, onChange, state, dispatch }: EditorCanvasProps): ReactElement {
-  const { applyZoomBehaviour, transform, resetPan, toSvgPoint } = useZoom();
+const _renderCount = { n: 0 };
+
+export function EditorCanvas({ value, onChange, state, dispatch, viewCenterRef }: EditorCanvasProps): ReactElement {
+  const { applyZoomBehaviour, transform, fitView, toSvgPoint } = useZoom();
   const nodes = value.nodes ?? [];
   const edges = value.edges ?? [];
+
+  if (viewCenterRef) {
+    viewCenterRef.current = () => ({
+      x: transform.invertX(CANVAS_WIDTH / 2),
+      y: transform.invertY(CANVAS_HEIGHT / 2),
+    });
+  }
+
+  _renderCount.n += 1;
+  console.log(
+    `[EditorCanvas] render #${_renderCount.n} — nodes:${nodes.length} transform:${transform.toString()} ts:${Date.now()}`
+  );
+
+  // Keep a ref to the latest nodes so the one-shot fit effect can read them
+  // without taking a dependency on the nodes array (which is a new reference
+  // every render due to the `?? []` fallback).
+  const nodesRef = useRef(nodes);
+  nodesRef.current = nodes;
+
+  // Fit all nodes into view on first render. Runs exactly once: empty deps array
+  // means it fires after the first paint; nodesRef.current gives the current
+  // snapshot without making nodes a dependency that re-triggers on every update.
+  const didFitRef = useRef(false);
+  useLayoutEffect(() => {
+    const currentNodes = nodesRef.current;
+    console.log(
+      `[EditorCanvas] fitView effect — didFit:${didFitRef.current} nodes:${currentNodes.length} ts:${Date.now()}`
+    );
+    if (didFitRef.current || currentNodes.length === 0) {
+      return;
+    }
+    const bbox = nodeBBox(currentNodes);
+    if (bbox) {
+      console.log('[EditorCanvas] calling fitView — bbox:', bbox);
+      fitView(bbox, CANVAS_WIDTH, CANVAS_HEIGHT);
+      didFitRef.current = true;
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const { mode, selectedIds, hoveredId } = state;
   const selectionRect = mode.type === 'selecting' ? mode.rect : null;
@@ -83,8 +124,6 @@ export function EditorCanvas({ value, onChange, state, dispatch }: EditorCanvasP
   const edgeById = new Map(edges.map((ed) => [ed.id, ed]));
 
   const theme = getEditorTheme(transform.k);
-  const markerUrl = `url(#${MARKER_ID})`;
-  const arrowShorten = ARROW_SHORTEN / transform.k;
 
   const { applyResize, onResizeHandlePointerDown } = createResizeHandlers({
     value,
@@ -245,49 +284,18 @@ export function EditorCanvas({ value, onChange, state, dispatch }: EditorCanvasP
         borderColor: 'divider',
         outline: 'none',
       }}
-      onDoubleClick={resetPan}
+      onDoubleClick={() => {
+        const bbox = nodeBBox(nodes);
+        if (bbox) {
+          fitView(bbox, CANVAS_WIDTH, CANVAS_HEIGHT);
+        }
+      }}
       onKeyDown={onKeyDown}
       onPointerDown={onSvgPointerDown}
       onPointerMove={onSvgPointerMove}
       onPointerUp={onSvgPointerUp}
     >
-      <defs>
-        <marker
-          id={MARKER_ID}
-          markerWidth={8 / transform.k}
-          markerHeight={6 / transform.k}
-          refX={7 / transform.k}
-          refY={3 / transform.k}
-          orient="auto"
-          markerUnits="userSpaceOnUse"
-        >
-          <path
-            d={`M0,0 L0,${6 / transform.k} L${8 / transform.k},${3 / transform.k} z`}
-            fill="currentColor"
-            fillOpacity={theme.arrowOpacity}
-          />
-        </marker>
-      </defs>
-
       <g transform={transform.toString()}>
-        {edges.map((edge) => (
-          <EditorEdge
-            key={edge.id}
-            edge={edge}
-            nodeById={nodeById}
-            isSelected={!selectionBoundingBox && selectedIds.has(edge.id)}
-            isDragging={dragEdge !== null}
-            markerUrl={markerUrl}
-            arrowShorten={arrowShorten}
-            k={transform.k}
-            theme={theme}
-            onEdgeClick={(event) => onEdgeClick(event, edge.id)}
-            onEndpointPointerDown={(event, end, fixedX, fixedY, fixedNodeId, fixedAnchor) =>
-              onEdgeEndpointPointerDown(event, edge.id, end, fixedX, fixedY, fixedNodeId, fixedAnchor)
-            }
-          />
-        ))}
-
         {nodes.map((node) => (
           <EditorNode
             key={node.id}
@@ -296,7 +304,6 @@ export function EditorCanvas({ value, onChange, state, dispatch }: EditorCanvasP
             isSelected={selectedIds.has(node.id)}
             snapTarget={dragEdge?.snapTargetId === node.id}
             isDragging={dragEdge !== null}
-            k={transform.k}
             theme={theme}
             onPointerDown={(event) => onNodePointerDown(event, node.id)}
             onPointerMove={(event) => onNodePointerMove(event, node.id)}
@@ -310,6 +317,23 @@ export function EditorCanvas({ value, onChange, state, dispatch }: EditorCanvasP
           />
         ))}
 
+        {edges.map((edge) => (
+          <EditorEdge
+            key={edge.id}
+            edge={edge}
+            nodeById={nodeById}
+            isSelected={!selectionBoundingBox && selectedIds.has(edge.id)}
+            isDragging={dragEdge !== null}
+            nsPrefix={NS_PREFIX}
+            k={transform.k}
+            theme={theme}
+            onEdgeClick={(event) => onEdgeClick(event, edge.id)}
+            onEndpointPointerDown={(event, end, fixedX, fixedY, fixedNodeId, fixedAnchor) =>
+              onEdgeEndpointPointerDown(event, edge.id, end, fixedX, fixedY, fixedNodeId, fixedAnchor)
+            }
+          />
+        ))}
+
         {selectionBoundingBox && (
           <SelectionBoundingBox
             bbox={selectionBoundingBox}
@@ -319,9 +343,7 @@ export function EditorCanvas({ value, onChange, state, dispatch }: EditorCanvasP
           />
         )}
 
-        {dragEdge && (
-          <DragEdgeLine dragEdge={dragEdge} arrowShorten={arrowShorten} markerUrl={markerUrl} theme={theme} />
-        )}
+        {dragEdge && <DragEdgeLine dragEdge={dragEdge} k={transform.k} nsPrefix={NS_PREFIX} theme={theme} />}
 
         {selectionRect && <SelectionRectOverlay rect={selectionRect} theme={theme} />}
       </g>

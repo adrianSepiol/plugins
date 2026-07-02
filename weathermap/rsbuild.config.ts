@@ -21,7 +21,7 @@ export default createConfigForPlugin({
     plugins: [pluginReact()],
   },
   moduleFederation: {
-    exposes: [{ './Weathermap': './src/panels/weathermap' }],
+    exposes: [{ './Weathermap': './src/Weathermap.tsx' }],
     shared: {
       react: { requiredVersion: '18.2.0', singleton: true },
       'react-dom': { requiredVersion: '18.2.0', singleton: true },

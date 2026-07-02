@@ -113,6 +113,32 @@ export function EdgePropertiesPanel({ edge, nodes, onChange }: EdgePropertiesPan
 
       <TextField
         select
+        label="Thickness mode"
+        size="small"
+        value={edge.thicknessMode ?? 'fixed'}
+        onChange={(e) => onChange({ ...edge, thicknessMode: e.target.value as 'fixed' | 'threshold' })}
+      >
+        <MenuItem value="fixed">Fixed</MenuItem>
+        <MenuItem value="threshold">Threshold</MenuItem>
+      </TextField>
+
+      {(edge.thicknessMode ?? 'fixed') === 'fixed' && (
+        <TextField
+          label="Stroke width"
+          size="small"
+          type="number"
+          inputProps={{ min: 1, step: 1 }}
+          value={edge.strokeWidth ?? ''}
+          placeholder="default"
+          onChange={(e) => {
+            const v = parseFloat(e.target.value);
+            onChange({ ...edge, strokeWidth: Number.isFinite(v) && v > 0 ? v : undefined });
+          }}
+        />
+      )}
+
+      <TextField
+        select
         label="Source → target query"
         size="small"
         value={edge.sourceQueryIndex ?? ''}

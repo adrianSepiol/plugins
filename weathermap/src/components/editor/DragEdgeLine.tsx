@@ -15,28 +15,36 @@ import { ReactElement } from 'react';
 import { DragEdge } from '../../types/editor-types';
 import { shortenLine } from '../../utils/edgeUtils';
 import { EditorTheme } from '../../utils/editorTheme';
+import { ARROW_SHORTEN_PX, EdgeArrowMarker, markerId } from '../node/EdgeLines';
 
 interface DragEdgeLineProps {
   dragEdge: DragEdge;
-  arrowShorten: number;
-  markerUrl: string;
+  k: number;
+  nsPrefix: string;
   theme: EditorTheme;
 }
 
-export function DragEdgeLine({ dragEdge, arrowShorten, markerUrl, theme }: DragEdgeLineProps): ReactElement {
+export function DragEdgeLine({ dragEdge, k, nsPrefix, theme }: DragEdgeLineProps): ReactElement {
+  const strokeWidth = (theme.dragEdge.strokeWidth as number);
+  const arrowShorten = dragEdge.snapTargetId ? ARROW_SHORTEN_PX * strokeWidth : 0;
   const shortened = shortenLine(
     { x1: dragEdge.x1, y1: dragEdge.y1, x2: dragEdge.x2, y2: dragEdge.y2 },
-    dragEdge.snapTargetId ? arrowShorten : 0
+    arrowShorten
   );
   return (
-    <line
-      x1={shortened.x1}
-      y1={shortened.y1}
-      x2={shortened.x2}
-      y2={shortened.y2}
-      {...theme.dragEdge}
-      markerEnd={markerUrl}
-      style={{ pointerEvents: 'none' }}
-    />
+    <>
+      <defs>
+        <EdgeArrowMarker nsPrefix={nsPrefix} fillOpacity={theme.arrowOpacity} />
+      </defs>
+      <line
+        x1={shortened.x1}
+        y1={shortened.y1}
+        x2={shortened.x2}
+        y2={shortened.y2}
+        {...theme.dragEdge}
+        markerEnd={`url(#${markerId(nsPrefix)})`}
+        style={{ pointerEvents: 'none' }}
+      />
+    </>
   );
 }

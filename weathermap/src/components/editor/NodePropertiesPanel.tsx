@@ -12,14 +12,12 @@
 // limitations under the License.
 
 import { ReactElement } from 'react';
-import { Box, MenuItem, Stack, TextField, ToggleButton, ToggleButtonGroup, Tooltip, Typography } from '@mui/material';
+import { Autocomplete, Box, MenuItem, Stack, TextField, Typography } from '@mui/material';
 import { OptionsColorPicker } from '@perses-dev/components';
 import { useQueryCountContext } from '@perses-dev/plugin-system';
 import { NodeSpec } from '../../types/weathermap-types';
-import { ICON_PATHS } from '../../utils/icons';
+import { ICON_NAMES } from '../../utils/icons';
 import { IconPreview } from '../node/IconPreview';
-
-const ICON_NAMES = Object.keys(ICON_PATHS);
 
 interface NodePropertiesPanelProps {
   node: NodeSpec;
@@ -85,27 +83,30 @@ export function NodePropertiesPanel({ node, onChange }: NodePropertiesPanelProps
       </TextField>
 
       {kind !== 'text' && (
-        <Box>
-          <Typography variant="caption" color="text.secondary" display="block" sx={{ mb: 0.5 }}>
-            Icon
-          </Typography>
-          <ToggleButtonGroup
-            exclusive
-            size="small"
-            value={node.icon ?? null}
-            onChange={(_, newIcon) => onChange({ ...node, icon: newIcon ?? undefined })}
-            sx={{ flexWrap: 'wrap', gap: 0.5 }}
-          >
-            {ICON_NAMES.map((name) => (
-              <Tooltip key={name} title={name}>
-                <ToggleButton value={name} aria-label={name}>
-                  <IconPreview name={name} />
-                </ToggleButton>
-              </Tooltip>
-            ))}
-          </ToggleButtonGroup>
-        </Box>
+        <Autocomplete
+          options={ICON_NAMES}
+          value={node.icon ?? null}
+          onChange={(_, newIcon) => onChange({ ...node, icon: newIcon ?? undefined })}
+          renderInput={(params) => <TextField {...params} label="Icon" size="small" />}
+          renderOption={(props, name) => (
+            <Box component="li" {...props} sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+              <IconPreview name={name} />
+              <Typography variant="body2">{name}</Typography>
+            </Box>
+          )}
+          isOptionEqualToValue={(option, value) => option === value}
+          clearOnEscape
+          size="small"
+        />
       )}
+
+      <TextField
+        label="Link URL"
+        size="small"
+        value={node.link ?? ''}
+        onChange={(e) => onChange({ ...node, link: e.target.value || undefined })}
+        helperText="Navigate to this URL on click. Use ${varName} for dashboard variables."
+      />
 
       <TextField
         label="Label"
@@ -114,6 +115,36 @@ export function NodePropertiesPanel({ node, onChange }: NodePropertiesPanelProps
         onChange={(e) => onChange({ ...node, label: e.target.value || undefined })}
         helperText="Use {{label_name}} or {{value}} to interpolate query data"
       />
+
+      <Stack direction="row" spacing={1}>
+        <TextField
+          select
+          label="Label position"
+          size="small"
+          value={node.labelPosition ?? 'below'}
+          onChange={(e) => onChange({ ...node, labelPosition: e.target.value as NodeSpec['labelPosition'] })}
+          sx={{ flex: 1 }}
+        >
+          <MenuItem value="below">Below</MenuItem>
+          <MenuItem value="above">Above</MenuItem>
+          <MenuItem value="left">Left</MenuItem>
+          <MenuItem value="right">Right</MenuItem>
+          <MenuItem value="center">Center</MenuItem>
+        </TextField>
+        <TextField
+          label="Label padding"
+          size="small"
+          type="number"
+          inputProps={{ min: 0, step: 1 }}
+          value={node.labelPadding ?? ''}
+          placeholder="12"
+          onChange={(e) => {
+            const v = parseInt(e.target.value, 10);
+            onChange({ ...node, labelPadding: !isNaN(v) && v >= 0 ? v : undefined });
+          }}
+          sx={{ width: 100 }}
+        />
+      </Stack>
 
       <TextField
         select

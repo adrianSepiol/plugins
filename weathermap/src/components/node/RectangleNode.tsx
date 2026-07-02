@@ -14,6 +14,7 @@
 import { ReactElement } from 'react';
 import { NodeSpec } from '../../types/weathermap-types';
 import { ICON_PATHS } from '../../utils/icons';
+import { labelAttrs } from '../../utils/labelPosition';
 
 export const ICON_FILL_RATIO = 0.6;
 export const CORNER_RADIUS_RATIO = 0.2;
@@ -39,7 +40,7 @@ export function RectangleNode({
   const iconSize = nodeSize * ICON_FILL_RATIO;
   const iconScale = iconSize / 24;
   const cornerRadius = nodeSize * CORNER_RADIUS_RATIO;
-  const labelOffset = half + 12;
+  const lAttrs = labelAttrs(half, node.labelPosition, node.labelPadding);
   const iconPath = node.icon ? ICON_PATHS[node.icon] : undefined;
   const fill = fillOverride ?? DEFAULT_RECT_COLOR;
 
@@ -67,9 +68,10 @@ export function RectangleNode({
       )}
       {displayLabel && (
         <text
-          y={labelOffset}
-          textAnchor="middle"
-          dominantBaseline="hanging"
+          x={lAttrs.x}
+          y={lAttrs.y}
+          textAnchor={lAttrs.textAnchor}
+          dominantBaseline={lAttrs.dominantBaseline}
           fill="currentColor"
           fontSize={12}
           style={{ pointerEvents: 'none', userSelect: 'none' }}
