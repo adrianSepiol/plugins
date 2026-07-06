@@ -13,6 +13,7 @@
 
 import { Box, Theme, Typography, useTheme } from '@mui/material';
 import {
+  FormatOptions,
   formatValue,
   Table,
   TableCellConfigs,
@@ -36,6 +37,8 @@ import { QueryDataType, TimeSeriesData } from '@perses-dev/spec';
 import { CellSettings, ColumnSettings, evaluateConditionalFormatting, TableOptions } from '../models';
 import { buildRawTableData, getTablePanelQueryMode } from '../table-data-utils';
 import { EmbeddedPanel } from './EmbeddedPanel';
+
+type FilterValuesType<T> = Array<{ original: T; formatted: T }>;
 
 function parseNumericCellValue(value: unknown): number | undefined {
   if (typeof value === 'number' && Number.isFinite(value)) {
@@ -202,7 +205,7 @@ function generateCellContentConfig(
 }
 
 interface ColumnFilterDropdownProps {
-  allValues: Array<string | number>;
+  allValues: FilterValuesType<string | number>;
   selectedValues: Array<string | number>;
   onFilterChange: (values: Array<string | number>) => void;
   theme: Theme;
@@ -273,7 +276,7 @@ function ColumnFilterDropdown({
           <input
             type="checkbox"
             checked={selectedValues.length === values.length && values.length > 0}
-            onChange={(e) => onFilterChange(e.target.checked ? values : [])}
+            onChange={(e) => onFilterChange(e.target.checked ? values.map((v) => v.original) : [])}
             style={{ marginRight: 8 }}
           />
           <span style={{ color: theme.palette.text.primary }}>Select All ({values.length})</span>
@@ -305,12 +308,12 @@ function ColumnFilterDropdown({
           >
             <input
               type="checkbox"
-              checked={selectedValues.includes(value)}
+              checked={selectedValues.includes(value.original)}
               onChange={(e) => {
                 if (e.target.checked) {
-                  onFilterChange([...selectedValues, value]);
+                  onFilterChange([...selectedValues, value.original]);
                 } else {
-                  onFilterChange(selectedValues.filter((v) => v !== value));
+                  onFilterChange(selectedValues.filter((v) => v !== value.original));
                 }
               }}
               style={{ marginRight: 8 }}
@@ -321,7 +324,7 @@ function ColumnFilterDropdown({
                 color: theme.palette.text.primary,
               }}
             >
-              {value === null || value === undefined || value === '' ? '(empty)' : String(value)}
+              {value === null || value === undefined || value.formatted === '' ? '(empty)' : String(value.formatted)}
             </span>
           </label>
         </div>
@@ -449,20 +452,59 @@ export function TablePanel({ contentDimensions, spec, queryResults }: TableProps
       }
     }
 
+    // Include column names from columnSettings so that columns with no data
+    // are still extended with undefined for cellSettings evaluation (e.g. N/A for null)
+    for (const col of spec.columnSettings ?? []) {
+      if (!result.includes(col.name)) {
+        result.push(col.name);
+      }
+    }
+
     return result;
-  }, [data]);
+  }, [data, spec.columnSettings]);
 
-  // fetch unique values for each column of filtering
+  const columnsFormat = useMemo(() => {
+    const columnsFormat: Record<string, FormatOptions> = {};
+    const settings = spec?.columnSettings;
+    if (settings) {
+      for (let i = 0; i < settings.length; i++) {
+        const { name, format } = settings[i] || {};
+        if (name && format) {
+          columnsFormat[name] = format;
+        }
+      }
+    }
+
+    return columnsFormat;
+  }, [spec]);
+
   const columnUniqueValues = useMemo(() => {
-    const uniqueValues: Record<string, Array<string | number>> = {};
+    const uniqueValues: Record<string, FilterValuesType<string | number>> = {};
 
-    keys.forEach((key) => {
-      const values = data.map((row) => row[key]).filter((val) => val !== null && val !== undefined && val !== '');
-      uniqueValues[key] = Array.from(new Set(values as Array<string | number>));
-    });
+    for (const key of keys) {
+      const formatOption = columnsFormat?.[key];
+      uniqueValues[key] = [];
+      const usedValues: Map<string, true> = new Map();
+      for (const row of data) {
+        const val = row[key];
+        if (val === '' || val === null || val === undefined) {
+          continue;
+        }
+        if (usedValues.get(String(val))) {
+          continue;
+        }
 
+        if (typeof val === 'string' || typeof val === 'number') {
+          uniqueValues[key].push({
+            original: val,
+            formatted: formatOption && typeof val === 'number' ? formatValue(val, formatOption) : val,
+          });
+          usedValues.set(String(val), true);
+        }
+      }
+    }
     return uniqueValues;
-  }, [data, keys]);
+  }, [data, keys, columnsFormat]);
 
   const gaugeRangeByColumn = useMemo(() => {
     const result: Record<string, GaugeRange> = {};
@@ -531,6 +573,27 @@ export function TablePanel({ contentDimensions, spec, queryResults }: TableProps
     return columns;
   }, [keys, spec.columnSettings, spec.defaultColumnHidden, allVariables, gaugeRangeByColumn, spec.cellSettings]);
 
+  // Filtering state — declared before cellConfigs so filteredData is available for cell config evaluation
+  const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
+
+  // filter data based on the current filters
+  const filteredData = useMemo(() => {
+    if (!spec.enableFiltering || columnFilters.length === 0) {
+      return data;
+    }
+
+    return data.filter((row) => {
+      return columnFilters.every((filter) => {
+        const value = row[filter.id];
+        const filterValues = filter.value as Array<string | number>;
+
+        if (!filterValues || filterValues.length === 0) return true;
+
+        return filterValues.includes(value as string | number);
+      });
+    });
+  }, [data, columnFilters, spec.enableFiltering]);
+
   // Generate cell settings that will be used by the table to render cells (text color, background color, ...)
   const cellConfigs: TableCellConfigs = useMemo(() => {
     // If there are no cell settings globally or per column, return an empty object
@@ -541,7 +604,7 @@ export function TablePanel({ contentDimensions, spec, queryResults }: TableProps
     const result: TableCellConfigs = {};
 
     let index = 0;
-    for (const row of data) {
+    for (const row of filteredData) {
       // Transforming key to object to extend the row with undefined values if the key is not present
       // for checking the cell config "Misc" condition with "null"
       const keysAsObj = keys.reduce(
@@ -580,7 +643,7 @@ export function TablePanel({ contentDimensions, spec, queryResults }: TableProps
     }
 
     return result;
-  }, [data, keys, spec.cellSettings, spec.columnSettings]);
+  }, [filteredData, keys, spec.cellSettings, spec.columnSettings]);
 
   function generateDefaultSortingState(): SortingState {
     return (
@@ -597,8 +660,6 @@ export function TablePanel({ contentDimensions, spec, queryResults }: TableProps
 
   const [sorting, setSorting] = useState<SortingState>(generateDefaultSortingState());
 
-  // Filtering state
-  const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
   const [filterAnchorEl, setFilterAnchorEl] = useState<{ [key: string]: HTMLElement | null }>({});
   const [openFilterColumn, setOpenFilterColumn] = useState<string | null>(null);
 
@@ -650,28 +711,6 @@ export function TablePanel({ contentDimensions, spec, queryResults }: TableProps
       document.removeEventListener('click', handleClick);
     };
   }, [openFilterColumn]);
-
-  // filter data based on the current filters
-  const filteredData = useMemo(() => {
-    let filtered = [...data];
-
-    // apply column filters if enabled
-    if (spec.enableFiltering && columnFilters.length > 0) {
-      filtered = filtered.filter((row) => {
-        return columnFilters.every((filter) => {
-          const value = row[filter.id];
-          const filterValues = filter.value as Array<string | number>;
-
-          if (!filterValues || filterValues.length === 0) return true; // No filter values means no filtering
-
-          // Check if the row value is in the selected filter values
-          return filterValues.includes(value as string | number);
-        });
-      });
-    }
-
-    return filtered;
-  }, [data, columnFilters, spec.enableFiltering]);
 
   // Keep ref in sync with filtered data for use in selection handler
   filteredDataRef.current = filteredData;
