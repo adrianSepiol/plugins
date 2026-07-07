@@ -12,15 +12,17 @@
 // limitations under the License.
 
 import { ReactElement } from 'react';
-import { SelectionRect } from '../../types/editor-types';
-import { EditorTheme } from '../../utils/editorTheme';
+import { SelectionRect } from '../../utils/editorReducer';
+import { editorStyles } from '../../utils/editorStyles';
+import { useWeathermapTheme } from '../../hooks/useWeathermapTheme';
+import { useZoomContext } from '../../contexts/ZoomContext';
 
 interface SelectionRectOverlayProps {
   rect: SelectionRect;
-  theme: EditorTheme;
 }
 
-export function SelectionRectOverlay({ rect, theme }: SelectionRectOverlayProps): ReactElement {
+export function SelectionRectOverlay({ rect }: SelectionRectOverlayProps): ReactElement {
+  const theme = editorStyles(useWeathermapTheme(), useZoomContext().transform.k);
   const minX = Math.min(rect.x0, rect.x1);
   const minY = Math.min(rect.y0, rect.y1);
   const width = Math.abs(rect.x1 - rect.x0);

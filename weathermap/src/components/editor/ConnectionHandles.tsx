@@ -12,8 +12,9 @@
 // limitations under the License.
 
 import { ReactElement } from 'react';
-import { NodeSpec, AnchorPoint } from '../../types/weathermap-types';
+import { NodeSpec, AnchorPoint } from '../../model';
 import { ANCHOR_KEYS, anchorPosition } from '../../utils/edgeUtils';
+import { useWeathermapTheme } from '../../hooks/useWeathermapTheme';
 
 const CROSS_LENGTH = 6;
 
@@ -23,6 +24,7 @@ interface ConnectionHandlesProps {
 }
 
 export function ConnectionHandles({ node, onDragStart }: ConnectionHandlesProps): ReactElement {
+  const { connection } = useWeathermapTheme();
   const armLen = CROSS_LENGTH;
 
   return (
@@ -34,15 +36,15 @@ export function ConnectionHandles({ node, onDragStart }: ConnectionHandlesProps)
             key={anchor}
             transform={`translate(${pos.x},${pos.y})`}
             style={{ cursor: 'crosshair' }}
-            onPointerDown={(e) => {
-              e.stopPropagation();
+            onPointerDown={(event) => {
+              event.stopPropagation();
               onDragStart(anchor, pos.x, pos.y);
             }}
           >
             <circle r={armLen} fill="transparent" />
-            <line x1={-armLen / 2} y1={0} x2={armLen / 2} y2={0} stroke="#2196f3" strokeWidth={1.5} />
-            <line x1={0} y1={-armLen / 2} x2={0} y2={armLen / 2} stroke="#2196f3" strokeWidth={1.5} />
-            <circle r={2} fill="#2196f3" />
+            <line x1={-armLen / 2} y1={0} x2={armLen / 2} y2={0} stroke={connection} strokeWidth={1.5} />
+            <line x1={0} y1={-armLen / 2} x2={0} y2={armLen / 2} stroke={connection} strokeWidth={1.5} />
+            <circle r={2} fill={connection} />
           </g>
         );
       })}

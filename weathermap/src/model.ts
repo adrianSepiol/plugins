@@ -1,12 +1,25 @@
+// Copyright The Perses Authors
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+// http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 import { TimeSeriesData, ThresholdOptions } from '@perses-dev/core';
 import { FormatOptions } from '@perses-dev/components';
 import { PanelProps, LegendSpecOptions, OptionsEditorProps } from '@perses-dev/plugin-system';
 
-export type QueryData = TimeSeriesData; // Type of data returned by a query plugin and supported by this plugin
+export type QueryData = TimeSeriesData;
 
-export type WeathermapProps = PanelProps<WeathermapOptions, QueryData>;
+export type WeathermapProps = PanelProps<WeathermapSpec, QueryData>;
 
-export interface QuerySettingsOptions {
+export interface QueryColorSettings {
   queryIndex: number;
   colorMode: 'fixed' | 'fixed-single';
   colorValue: string;
@@ -24,10 +37,10 @@ export interface NodeSpec {
   labelPosition?: LabelPosition;
   labelPadding?: number;
   icon?: string;
-  link?: string; // URL template for drill-down navigation; supports ${varName} syntax
-  queryIndex?: number; // index into queryResults; enables {{label}} interpolation in label
-  colorMode?: 'threshold' | 'fixed'; // how to color the node; requires queryIndex
-  color?: string; // fixed color (hex) used when colorMode === 'fixed'
+  link?: string;
+  queryIndex?: number;
+  colorMode?: 'threshold' | 'fixed';
+  color?: string;
 }
 
 export type AnchorPoint = 'n' | 's' | 'e' | 'w' | 'nw' | 'ne' | 'sw' | 'se';
@@ -54,7 +67,7 @@ export interface EdgeThresholdStep {
   strokeWidth: number;
 }
 
-export interface WeathermapOptions {
+export interface WeathermapSpec {
   legend?: LegendSpecOptions;
   thresholds?: ThresholdOptions;
   format?: FormatOptions;
@@ -62,9 +75,9 @@ export interface WeathermapOptions {
   backgroundImageFit?: 'contain' | 'stretch';
   edgeThresholdWidths?: EdgeThresholdStep[];
   edgeDefaultStrokeWidth?: number;
-  querySettings?: QuerySettingsOptions;
+  querySettings?: QueryColorSettings;
   nodes?: NodeSpec[];
   edges?: EdgeSpec[];
 }
 
-export type WeathermapOptionsEditorProps = OptionsEditorProps<WeathermapOptions>;
+export type WeathermapSpecEditorProps = OptionsEditorProps<WeathermapSpec>;

@@ -12,6 +12,7 @@
 // limitations under the License.
 
 import { ReactElement } from 'react';
+import { useTheme } from '@mui/material';
 import { ThresholdOptions } from '@perses-dev/core';
 import { FormatOptions, formatValue } from '@perses-dev/components';
 
@@ -25,17 +26,15 @@ interface ThresholdLegendProps {
   thresholds: ThresholdOptions;
   format: FormatOptions | undefined;
   paletteColors: string[];
-  /** Pixel position of the legend box top-left corner */
   x: number;
   y: number;
 }
 
 export function ThresholdLegend({ thresholds, format, paletteColors, x, y }: ThresholdLegendProps): ReactElement {
-  const defaultColor = thresholds.defaultColor ?? paletteColors[0] ?? '#4caf50';
+  const muiTheme = useTheme();
+  const defaultColor = thresholds.defaultColor ?? paletteColors[0] ?? muiTheme.palette.success.main;
   const steps = thresholds.steps ?? [];
 
-  // Build rows bottom-to-top: default (no lower bound), then each step ascending.
-  // Display them top-to-bottom so highest value is first (most alarming at top).
   const rows: Array<{ color: string; label: string }> = [
     ...steps.map((step, i) => ({
       color: step.color ?? paletteColors[i] ?? defaultColor,
@@ -54,9 +53,9 @@ export function ThresholdLegend({ thresholds, format, paletteColors, x, y }: Thr
         y={y}
         width={boxWidth}
         height={boxHeight}
-        fill="var(--mui-palette-background-paper, #1e1e1e)"
+        fill={muiTheme.palette.background.paper}
         fillOpacity={0.9}
-        stroke="var(--mui-palette-divider, #444)"
+        stroke={muiTheme.palette.divider}
         strokeWidth={1}
         rx={4}
       />
@@ -69,7 +68,7 @@ export function ThresholdLegend({ thresholds, format, paletteColors, x, y }: Thr
               x={x + PADDING + LABEL_OFFSET}
               y={ry + SWATCH_SIZE - 2}
               fontSize={FONT_SIZE}
-              fill="var(--mui-palette-text-primary, #e0e0e0)"
+              fill={muiTheme.palette.text.primary}
               style={{ userSelect: 'none' }}
             >
               {row.label}

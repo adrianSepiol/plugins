@@ -12,23 +12,24 @@
 // limitations under the License.
 
 import { PointerEvent, ReactElement } from 'react';
-import { BoundingBox, ResizeHandleId } from '../../types/editor-types';
+import { BoundingBox, ResizeHandleId } from '../../utils/editorReducer';
 import { HANDLE_POSITIONS, handlePosition, RESIZE_CURSORS } from '../../utils/resizeUtils';
-import { EditorTheme } from '../../utils/editorTheme';
+import { editorStyles } from '../../utils/editorStyles';
+import { useWeathermapTheme } from '../../hooks/useWeathermapTheme';
+import { useZoomContext } from '../../contexts/ZoomContext';
 
 interface SelectionBoundingBoxProps {
   bbox: BoundingBox;
   isResizing: boolean;
-  theme: EditorTheme;
-  onResizeHandlePointerDown: (e: PointerEvent<SVGCircleElement>, handleId: ResizeHandleId) => void;
+  onResizeHandlePointerDown: (event: PointerEvent<SVGCircleElement>, handleId: ResizeHandleId) => void;
 }
 
 export function SelectionBoundingBox({
   bbox,
   isResizing,
-  theme,
   onResizeHandlePointerDown,
 }: SelectionBoundingBoxProps): ReactElement {
+  const theme = editorStyles(useWeathermapTheme(), useZoomContext().transform.k);
   const pad = theme.selectionBBoxPad;
   const bx = bbox.minX - pad;
   const by = bbox.minY - pad;
@@ -49,7 +50,7 @@ export function SelectionBoundingBox({
             cy={pos.y}
             {...theme.resizeHandle}
             style={{ cursor: RESIZE_CURSORS[h] }}
-            onPointerDown={(e) => onResizeHandlePointerDown(e, h)}
+            onPointerDown={(event) => onResizeHandlePointerDown(event, h)}
           />
         );
       })}

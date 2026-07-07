@@ -15,18 +15,18 @@ import { PointerEvent, useCallback, useMemo, useRef, useState } from 'react';
 import { select } from 'd3-selection';
 import { zoom, zoomIdentity, ZoomTransform } from 'd3-zoom';
 
-const FIT_PADDING = 40; // canvas-coordinate padding around the node bounding box
+const FIT_PADDING = 40;
 
 export interface UseZoomResult {
-  applyZoomBehaviour: (node: SVGSVGElement) => void;
+  svgRef: (node: SVGSVGElement | null) => void;
   transform: ZoomTransform;
-  resetPan: () => void;
   fitView: (
     bbox: { minX: number; minY: number; maxX: number; maxY: number },
     canvasWidth: number,
     canvasHeight: number
   ) => void;
-  toSvgPoint: (event: PointerEvent<SVGSVGElement>) => { x: number; y: number };
+  toCanvasPoint: (event: PointerEvent<SVGSVGElement>) => { x: number; y: number };
+  resetPan: () => void;
 }
 
 export function useZoom(): UseZoomResult {
@@ -35,11 +35,13 @@ export function useZoom(): UseZoomResult {
 
   const zoomBehavior = useMemo(() => zoom<SVGSVGElement, unknown>(), []);
 
-  const applyZoomBehaviour = useCallback(
-    (node: SVGSVGElement): void => {
+  const svgRef = useCallback(
+    (node: SVGSVGElement | null): void => {
+      if (!node) {
+        return;
+      }
       nodeRef.current = node;
       zoomBehavior.on('zoom', ({ transform: t }: { transform: ZoomTransform }) => {
-        console.log('[useZoom] zoom event — transform:', t.toString(), new Error().stack?.split('\n')[2]?.trim());
         setTransform(t);
       });
       zoomBehavior.filter((event: Event) => {
@@ -56,6 +58,7 @@ export function useZoom(): UseZoomResult {
     [zoomBehavior]
   );
 
+  // not used for now, decide if should be used in the future
   const resetPan = useCallback(() => {
     if (!nodeRef.current) {
       return;
@@ -83,9 +86,12 @@ export function useZoom(): UseZoomResult {
     [zoomBehavior]
   );
 
-  const toSvgPoint = useCallback(
+  const toCanvasPoint = useCallback(
     (event: PointerEvent<SVGSVGElement>): { x: number; y: number } => {
-      const rect = nodeRef.current!.getBoundingClientRect();
+      const rect = nodeRef.current?.getBoundingClientRect();
+      if (!rect) {
+        throw new Error('SVG element is not available');
+      }
       const px = event.clientX - rect.left;
       const py = event.clientY - rect.top;
       return { x: transform.invertX(px), y: transform.invertY(py) };
@@ -93,5 +99,5 @@ export function useZoom(): UseZoomResult {
     [transform]
   );
 
-  return { applyZoomBehaviour, transform, resetPan, fitView, toSvgPoint };
+  return { svgRef, transform, fitView, toCanvasPoint, resetPan };
 }

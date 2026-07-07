@@ -11,7 +11,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-import { LabelPosition } from '../types/weathermap-types';
+import { LabelPosition } from '../model';
 
 const DEFAULT_PADDING = 12;
 

@@ -12,10 +12,12 @@
 // limitations under the License.
 
 import { PointerEvent, ReactElement } from 'react';
-import { AnchorPoint, EdgeSpec, NodeSpec } from '../../types/weathermap-types';
+import { AnchorPoint, EdgeSpec, NodeSpec } from '../../model';
 import { edgeEndpoints } from '../../utils/edgeUtils';
-import { EditorTheme } from '../../utils/editorTheme';
-import { EdgeLines, LineStyle } from '../node/EdgeLines';
+import { editorStyles } from '../../utils/editorStyles';
+import { useWeathermapTheme } from '../../hooks/useWeathermapTheme';
+import { useZoomContext } from '../../contexts/ZoomContext';
+import { EdgeLines, LineStyle } from '../shared/EdgeLines';
 
 interface EditorEdgeProps {
   edge: EdgeSpec;
@@ -24,7 +26,6 @@ interface EditorEdgeProps {
   isDragging: boolean;
   nsPrefix: string;
   k: number;
-  theme: EditorTheme;
   onEdgeClick: (event: PointerEvent<SVGLineElement>) => void;
   onEndpointPointerDown: (
     event: PointerEvent<SVGCircleElement>,
@@ -43,10 +44,10 @@ export function EditorEdge({
   isDragging,
   nsPrefix,
   k,
-  theme,
   onEdgeClick,
   onEndpointPointerDown,
 }: EditorEdgeProps): ReactElement | null {
+  const theme = editorStyles(useWeathermapTheme(), useZoomContext().transform.k);
   const pts = edgeEndpoints(edge, nodeById);
   if (!pts) {
     return null;
@@ -64,7 +65,6 @@ export function EditorEdge({
 
   return (
     <g>
-      {/* transparent full-span hit target */}
       <line
         x1={pts.x1}
         y1={pts.y1}

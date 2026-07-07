@@ -11,7 +11,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-export interface EditorTheme {
+import { WeathermapTheme } from '../hooks/useWeathermapTheme';
+
+export interface EditorStyles {
   edgeHit: { strokeWidth: number };
   edge: { stroke: string; strokeWidth: number; strokeOpacity: number };
   edgeSelected: { stroke: string; strokeWidth: number; strokeOpacity: number };
@@ -26,7 +28,7 @@ export interface EditorTheme {
   arrowOpacity: number;
 }
 
-export function getEditorTheme(k: number): EditorTheme {
+export function editorStyles(theme: WeathermapTheme, k: number): EditorStyles {
   return {
     edgeHit: {
       strokeWidth: 12 / k,
@@ -37,41 +39,41 @@ export function getEditorTheme(k: number): EditorTheme {
       strokeOpacity: 0.8,
     },
     edgeSelected: {
-      stroke: '#ff9800',
+      stroke: theme.selection,
       strokeWidth: 3 / k,
       strokeOpacity: 0.8,
     },
     edgeHandle: {
       r: 6 / k,
-      fill: '#ff9800',
-      stroke: 'white',
+      fill: theme.selection,
+      stroke: theme.background,
       strokeWidth: 1.5 / k,
     },
     selectionBBox: {
       fill: 'none',
-      stroke: '#ff9800',
+      stroke: theme.selection,
       strokeWidth: 1.5 / k,
       strokeDasharray: `${5 / k},${3 / k}`,
     },
     resizeHandle: {
       r: 5 / k,
-      fill: 'white',
-      stroke: '#ff9800',
+      fill: theme.background,
+      stroke: theme.selection,
       strokeWidth: 1.5 / k,
     },
     dragEdge: {
-      stroke: '#2196f3',
+      stroke: theme.connection,
       strokeWidth: 2 / k,
       strokeDasharray: `${6 / k},${4 / k}`,
     },
     selectionRect: {
-      fill: 'rgba(33,150,243,0.1)',
-      stroke: '#2196f3',
+      fill: theme.connection + '1a',
+      stroke: theme.connection,
       strokeWidth: 1 / k,
       strokeDasharray: `${4 / k},${3 / k}`,
     },
-    nodeDefault: { stroke: 'white', strokeWidth: 2 },
-    nodeSnap: { stroke: '#4caf50', strokeWidth: 3 },
+    nodeDefault: { stroke: theme.nodeStroke, strokeWidth: 2 },
+    nodeSnap: { stroke: theme.snapHighlight, strokeWidth: 3 },
     selectionBBoxPad: 6 / k,
     arrowOpacity: 0.8,
   };

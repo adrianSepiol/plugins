@@ -12,20 +12,22 @@
 // limitations under the License.
 
 import { ReactElement } from 'react';
-import { DragEdge } from '../../types/editor-types';
+import { DragEdge } from '../../utils/editorReducer';
 import { shortenLine } from '../../utils/edgeUtils';
-import { EditorTheme } from '../../utils/editorTheme';
-import { ARROW_SHORTEN_PX, EdgeArrowMarker, markerId } from '../node/EdgeLines';
+import { editorStyles } from '../../utils/editorStyles';
+import { useWeathermapTheme } from '../../hooks/useWeathermapTheme';
+import { useZoomContext } from '../../contexts/ZoomContext';
+import { ARROW_SHORTEN_PX, EdgeArrowMarker, markerId } from '../shared/EdgeLines';
 
 interface DragEdgeLineProps {
   dragEdge: DragEdge;
   k: number;
   nsPrefix: string;
-  theme: EditorTheme;
 }
 
-export function DragEdgeLine({ dragEdge, k, nsPrefix, theme }: DragEdgeLineProps): ReactElement {
-  const strokeWidth = (theme.dragEdge.strokeWidth as number);
+export function DragEdgeLine({ dragEdge, k, nsPrefix }: DragEdgeLineProps): ReactElement {
+  const theme = editorStyles(useWeathermapTheme(), useZoomContext().transform.k);
+  const strokeWidth = theme.dragEdge.strokeWidth as number;
   const arrowShorten = dragEdge.snapTargetId ? ARROW_SHORTEN_PX * strokeWidth : 0;
   const shortened = shortenLine(
     { x1: dragEdge.x1, y1: dragEdge.y1, x2: dragEdge.x2, y2: dragEdge.y2 },

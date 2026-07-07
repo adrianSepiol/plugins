@@ -11,13 +11,13 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-import { ReactElement } from 'react';
+import { ReactElement, useMemo } from 'react';
 import { Autocomplete, Box, MenuItem, Stack, TextField, Typography } from '@mui/material';
 import { OptionsColorPicker } from '@perses-dev/components';
-import { useQueryCountContext } from '@perses-dev/plugin-system';
-import { NodeSpec } from '../../types/weathermap-types';
+import { generateQueryNames, useDataQueriesContext } from '@perses-dev/plugin-system';
+import { NodeSpec } from '../../model';
 import { ICON_NAMES } from '../../utils/icons';
-import { IconPreview } from '../node/IconPreview';
+import { IconPreview } from './IconPreview';
 
 interface NodePropertiesPanelProps {
   node: NodeSpec;
@@ -25,9 +25,11 @@ interface NodePropertiesPanelProps {
 }
 
 export function NodePropertiesPanel({ node, onChange }: NodePropertiesPanelProps): ReactElement {
-  const queryCount = useQueryCountContext();
+  const { queryDefinitions } = useDataQueriesContext();
+  const queryCount = queryDefinitions.length;
+  const queryNames = useMemo(() => generateQueryNames(queryDefinitions), [queryDefinitions]);
   const queryIndexes = Array.from({ length: queryCount }, (_, i) => i);
-  const kind = node.kind;
+  const shape = node.kind;
 
   return (
     <Stack spacing={2}>
@@ -41,7 +43,9 @@ export function NodePropertiesPanel({ node, onChange }: NodePropertiesPanelProps
           value={node.x}
           onChange={(e) => {
             const v = parseInt(e.target.value, 10);
-            if (!isNaN(v)) onChange({ ...node, x: v });
+            if (!isNaN(v)) {
+              onChange({ ...node, x: v });
+            }
           }}
           sx={{ width: 80 }}
         />
@@ -52,7 +56,9 @@ export function NodePropertiesPanel({ node, onChange }: NodePropertiesPanelProps
           value={node.y}
           onChange={(e) => {
             const v = parseInt(e.target.value, 10);
-            if (!isNaN(v)) onChange({ ...node, y: v });
+            if (!isNaN(v)) {
+              onChange({ ...node, y: v });
+            }
           }}
           sx={{ width: 80 }}
         />
@@ -64,7 +70,9 @@ export function NodePropertiesPanel({ node, onChange }: NodePropertiesPanelProps
           inputProps={{ min: 8 }}
           onChange={(e) => {
             const v = parseInt(e.target.value, 10);
-            if (!isNaN(v) && v >= 8) onChange({ ...node, size: v });
+            if (!isNaN(v) && v >= 8) {
+              onChange({ ...node, size: v });
+            }
           }}
           sx={{ width: 80 }}
         />
@@ -72,9 +80,9 @@ export function NodePropertiesPanel({ node, onChange }: NodePropertiesPanelProps
 
       <TextField
         select
-        label="Kind"
+        label="Shape"
         size="small"
-        value={kind}
+        value={shape}
         onChange={(e) => onChange({ ...node, kind: e.target.value as NodeSpec['kind'] })}
       >
         <MenuItem value="rectangle">Rectangle</MenuItem>
@@ -82,7 +90,7 @@ export function NodePropertiesPanel({ node, onChange }: NodePropertiesPanelProps
         <MenuItem value="text">Text</MenuItem>
       </TextField>
 
-      {kind !== 'text' && (
+      {shape !== 'text' && (
         <Autocomplete
           options={ICON_NAMES}
           value={node.icon ?? null}
@@ -135,7 +143,7 @@ export function NodePropertiesPanel({ node, onChange }: NodePropertiesPanelProps
           label="Label padding"
           size="small"
           type="number"
-          inputProps={{ min: 0, step: 1 }}
+          slotProps={{ htmlInput: { min: 0, step: 1 } }}
           value={node.labelPadding ?? ''}
           placeholder="12"
           onChange={(e) => {
@@ -162,7 +170,7 @@ export function NodePropertiesPanel({ node, onChange }: NodePropertiesPanelProps
         </MenuItem>
         {queryIndexes.map((qi) => (
           <MenuItem key={qi} value={qi}>
-            #{qi + 1}
+            {queryNames[qi] ?? `#${qi + 1}`}
           </MenuItem>
         ))}
       </TextField>

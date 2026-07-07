@@ -1,0 +1,256 @@
+@startuml weathermap-components
+
+skinparam componentStyle rectangle
+skinparam backgroundColor #1e1e1e
+skinparam component {
+  BackgroundColor #2d2d2d
+  BorderColor #555
+  FontColor #e0e0e0
+}
+skinparam package {
+  BackgroundColor #252525
+  BorderColor #444
+  FontColor #aaa
+}
+skinparam arrow {
+  Color #666
+}
+skinparam note {
+  BackgroundColor #2a2a2d
+  BorderColor #555
+  FontColor #aaa
+}
+
+' ─────────────────────────────────────────
+' MODEL
+' ─────────────────────────────────────────
+package "model" {
+  [model.ts]
+}
+
+' ─────────────────────────────────────────
+' CONTEXTS
+' ─────────────────────────────────────────
+package "contexts" {
+  [ZoomContext]
+  [EditorContext]
+}
+
+[EditorContext] --> [model.ts]
+[EditorContext] --> [editorReducer]
+
+' ─────────────────────────────────────────
+' UTILS
+' ─────────────────────────────────────────
+package "utils" {
+  [editorReducer]
+  [editorStyles]
+  [edgeUtils]
+  [resizeUtils]
+  [selectionUtils]
+  [labelPosition]
+  [icons]
+}
+
+[editorReducer] --> [model.ts]
+note right of [editorStyles]
+  imports WeathermapTheme
+  from useWeathermapTheme
+end note
+[edgeUtils] --> [model.ts]
+[resizeUtils] --> [editorReducer]
+[selectionUtils] --> [model.ts]
+[selectionUtils] --> [editorReducer]
+
+' ─────────────────────────────────────────
+' HOOKS
+' ─────────────────────────────────────────
+package "hooks" {
+  [useZoom]
+  [useWeathermapTheme]
+  [useNodeMove]
+  [useEdgeConnect]
+  [useResize]
+  [useRectSelect]
+}
+
+[useZoom] --> [ZoomContext]
+[useNodeMove] --> [EditorContext]
+[useNodeMove] --> [ZoomContext]
+[useEdgeConnect] --> [EditorContext]
+[useEdgeConnect] --> [ZoomContext]
+[useEdgeConnect] --> [edgeUtils]
+[useResize] --> [EditorContext]
+[useResize] --> [ZoomContext]
+[useResize] --> [resizeUtils]
+[useResize] --> [editorReducer]
+[useRectSelect] --> [EditorContext]
+[useRectSelect] --> [ZoomContext]
+[useRectSelect] --> [selectionUtils]
+
+' ─────────────────────────────────────────
+' COMPONENTS / SHARED
+' ─────────────────────────────────────────
+package "components/shared" {
+  [NodeRenderer]
+  [RectangleNode]
+  [IconNode]
+  [TextNode]
+  [EdgeLines]
+  [EdgeLabel]
+}
+
+[NodeRenderer] --> [model.ts]
+[NodeRenderer] --> [RectangleNode]
+[NodeRenderer] --> [IconNode]
+[NodeRenderer] --> [TextNode]
+[RectangleNode] --> [model.ts]
+[RectangleNode] --> [icons]
+[IconNode] --> [model.ts]
+[IconNode] --> [icons]
+[EdgeLines] --> [edgeUtils]
+
+' ─────────────────────────────────────────
+' COMPONENTS / EDITOR
+' ─────────────────────────────────────────
+package "components/editor" {
+  [WeathermapEditor]
+  [EditorCanvas]
+  [EditorNode]
+  [EditorEdge]
+  [ConnectionHandles]
+  [SelectionBoundingBox]
+  [SelectionRectOverlay]
+  [DragEdgeLine]
+  [NodePropertiesPanel]
+  [EdgePropertiesPanel]
+  [IconPreview]
+  [IconPicker]
+}
+
+[WeathermapEditor] --> [EditorContext]
+[WeathermapEditor] --> [editorReducer]
+[WeathermapEditor] --> [model.ts]
+
+[EditorCanvas] --> [useZoom]
+[EditorCanvas] --> [ZoomContext]
+[EditorCanvas] --> [EditorContext]
+[EditorCanvas] --> [useNodeMove]
+[EditorCanvas] --> [useEdgeConnect]
+[EditorCanvas] --> [useResize]
+[EditorCanvas] --> [useRectSelect]
+[EditorCanvas] --> [resizeUtils]
+[EditorCanvas] --> [EditorNode]
+[EditorCanvas] --> [EditorEdge]
+[EditorCanvas] --> [SelectionBoundingBox]
+[EditorCanvas] --> [DragEdgeLine]
+[EditorCanvas] --> [SelectionRectOverlay]
+
+[EditorNode] --> [ZoomContext]
+[EditorNode] --> [useWeathermapTheme]
+[EditorNode] --> [editorStyles]
+[EditorNode] --> [model.ts]
+[EditorNode] --> [NodeRenderer]
+[EditorNode] --> [ConnectionHandles]
+
+[EditorEdge] --> [ZoomContext]
+[EditorEdge] --> [useWeathermapTheme]
+[EditorEdge] --> [editorStyles]
+[EditorEdge] --> [model.ts]
+[EditorEdge] --> [edgeUtils]
+[EditorEdge] --> [EdgeLines]
+
+[ConnectionHandles] --> [useWeathermapTheme]
+[ConnectionHandles] --> [model.ts]
+[ConnectionHandles] --> [edgeUtils]
+
+[SelectionBoundingBox] --> [ZoomContext]
+[SelectionBoundingBox] --> [useWeathermapTheme]
+[SelectionBoundingBox] --> [editorStyles]
+[SelectionBoundingBox] --> [editorReducer]
+[SelectionBoundingBox] --> [resizeUtils]
+
+[SelectionRectOverlay] --> [ZoomContext]
+[SelectionRectOverlay] --> [useWeathermapTheme]
+[SelectionRectOverlay] --> [editorStyles]
+[SelectionRectOverlay] --> [editorReducer]
+
+[DragEdgeLine] --> [ZoomContext]
+[DragEdgeLine] --> [useWeathermapTheme]
+[DragEdgeLine] --> [editorStyles]
+[DragEdgeLine] --> [editorReducer]
+[DragEdgeLine] --> [edgeUtils]
+[DragEdgeLine] --> [EdgeLines]
+
+[NodePropertiesPanel] --> [model.ts]
+[NodePropertiesPanel] --> [icons]
+[NodePropertiesPanel] --> [IconPreview]
+
+[EdgePropertiesPanel] --> [model.ts]
+
+[IconPreview] --> [icons]
+
+' ─────────────────────────────────────────
+' COMPONENTS / PANEL
+' ─────────────────────────────────────────
+package "components/panel" {
+  [WeathermapPanel]
+  [PanelEdgeLayer]
+  [PanelNodeLayer]
+  [ThresholdLegend]
+}
+
+[WeathermapPanel] --> [useZoom]
+[WeathermapPanel] --> [ZoomContext]
+[WeathermapPanel] --> [model.ts]
+[WeathermapPanel] --> [resizeUtils]
+[WeathermapPanel] --> [PanelEdgeLayer]
+[WeathermapPanel] --> [PanelNodeLayer]
+[WeathermapPanel] --> [ThresholdLegend]
+
+[PanelEdgeLayer] --> [useWeathermapTheme]
+[PanelEdgeLayer] --> [model.ts]
+[PanelEdgeLayer] --> [edgeUtils]
+[PanelEdgeLayer] --> [EdgeLabel]
+[PanelEdgeLayer] --> [EdgeLines]
+
+[PanelNodeLayer] --> [useWeathermapTheme]
+[PanelNodeLayer] --> [model.ts]
+[PanelNodeLayer] --> [NodeRenderer]
+
+' ─────────────────────────────────────────
+' COMPONENTS / SETTINGS
+' ─────────────────────────────────────────
+package "components/settings" {
+  [GlobalSettingsEditor]
+  [LegendSettings]
+  [BackgroundSettings]
+  [EdgeThicknessSettings]
+}
+
+[GlobalSettingsEditor] --> [model.ts]
+[GlobalSettingsEditor] --> [EditorContext]
+[GlobalSettingsEditor] --> [WeathermapEditor]
+[GlobalSettingsEditor] --> [EditorCanvas]
+[GlobalSettingsEditor] --> [NodePropertiesPanel]
+[GlobalSettingsEditor] --> [EdgePropertiesPanel]
+[GlobalSettingsEditor] --> [LegendSettings]
+[GlobalSettingsEditor] --> [BackgroundSettings]
+[GlobalSettingsEditor] --> [EdgeThicknessSettings]
+
+[LegendSettings] --> [model.ts]
+[BackgroundSettings] --> [model.ts]
+[EdgeThicknessSettings] --> [model.ts]
+
+' ─────────────────────────────────────────
+' ENTRY POINT
+' ─────────────────────────────────────────
+package "entry" {
+  [Weathermap.tsx]
+}
+
+[Weathermap.tsx] --> [model.ts]
+[Weathermap.tsx] --> [WeathermapPanel]
+[Weathermap.tsx] --> [GlobalSettingsEditor]
+
+@enduml

@@ -23,10 +23,12 @@ interface EdgeLabelProps {
   y: number;
   text: string;
   k?: number;
+  background?: string;
+  border?: string;
+  color?: string;
 }
 
-export function EdgeLabel({ x, y, text, k = 1 }: EdgeLabelProps): ReactElement {
-  // Approximate text width: ~0.55× font size per character is a good SVG heuristic
+export function EdgeLabel({ x, y, text, k = 1, background = '#EFEFEF', border = '#DCDCDC', color = '#2B2B2B' }: EdgeLabelProps): ReactElement {
   const approxWidth = text.length * FONT_SIZE * 0.55 + PADDING_X * 2;
   const scale = 1 / k;
 
@@ -37,8 +39,8 @@ export function EdgeLabel({ x, y, text, k = 1 }: EdgeLabelProps): ReactElement {
         y={-HEIGHT / 2}
         width={approxWidth}
         height={HEIGHT}
-        fill="#EFEFEF"
-        stroke="#DCDCDC"
+        fill={background}
+        stroke={border}
         strokeWidth={1}
         rx={HEIGHT / 2}
       />
@@ -49,7 +51,7 @@ export function EdgeLabel({ x, y, text, k = 1 }: EdgeLabelProps): ReactElement {
         dominantBaseline="central"
         fontSize={FONT_SIZE}
         fontStyle="italic"
-        fill="#2B2B2B"
+        fill={color}
       >
         {text}
       </text>

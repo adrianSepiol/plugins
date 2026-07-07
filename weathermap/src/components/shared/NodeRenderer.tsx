@@ -12,7 +12,7 @@
 // limitations under the License.
 
 import { ReactElement } from 'react';
-import { NodeSpec } from '../../types/weathermap-types';
+import { NodeSpec } from '../../model';
 import { RectangleNode } from './RectangleNode';
 import { IconNode } from './IconNode';
 import { TextNode } from './TextNode';
@@ -35,13 +35,13 @@ export function NodeRenderer({
   labelOverride,
   fillOverride,
 }: NodeRendererProps): ReactElement {
-  const kind = node.kind;
+  const shape = node.kind;
   const half = node.size / 2;
   const displayLabel = labelOverride ?? node.label;
 
   return (
     <g transform={`translate(${node.x},${node.y})`} {...groupProps}>
-      {kind === 'rectangle' && (
+      {shape === 'rectangle' && (
         <RectangleNode
           node={node}
           nodeSize={node.size}
@@ -51,7 +51,7 @@ export function NodeRenderer({
           rectProps={rectProps}
         />
       )}
-      {kind === 'icon' && (
+      {shape === 'icon' && (
         <IconNode
           node={node}
           nodeSize={node.size}
@@ -61,7 +61,7 @@ export function NodeRenderer({
           rectProps={rectProps}
         />
       )}
-      {kind === 'text' && (
+      {shape === 'text' && (
         <TextNode nodeSize={node.size} displayLabel={displayLabel} fillOverride={fillOverride} rectProps={rectProps} />
       )}
     </g>

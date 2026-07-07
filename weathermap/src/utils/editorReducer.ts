@@ -11,8 +11,45 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-import type { DragEdge, MultiResizeDrag, SelectionRect, ResizeHandleId } from '../types/editor-types';
-import { AnchorPoint } from '../types/weathermap-types';
+import { AnchorPoint } from '../model';
+
+export interface SelectionRect {
+  x0: number;
+  y0: number;
+  x1: number;
+  y1: number;
+}
+
+export interface BoundingBox {
+  minX: number;
+  minY: number;
+  maxX: number;
+  maxY: number;
+}
+
+export type ResizeHandleId = 'nw' | 'n' | 'ne' | 'e' | 'se' | 's' | 'sw' | 'w';
+
+export interface MultiResizeDrag {
+  handleId: ResizeHandleId;
+  fixedX: number;
+  fixedY: number;
+  origBBox: BoundingBox;
+  origNodes: Array<{ id: string; x: number; y: number; size: number }>;
+  origEdges: Array<{ id: string; x2: number; y2: number }>;
+}
+
+export interface DragEdge {
+  sourceId: string;
+  sourceAnchor: AnchorPoint;
+  x1: number;
+  y1: number;
+  x2: number;
+  y2: number;
+  snapTargetId?: string;
+  snapTargetAnchor?: AnchorPoint;
+  editingEdgeId?: string;
+  editingEnd?: 'source' | 'target';
+}
 
 export type EditorMode =
   | { type: 'idle' }

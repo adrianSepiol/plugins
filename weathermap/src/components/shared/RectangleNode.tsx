@@ -11,27 +11,38 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-import { ReactElement, SVGProps } from 'react';
-import { NodeSpec } from '../../types/weathermap-types';
+import { ReactElement } from 'react';
+import { NodeSpec } from '../../model';
 import { ICON_PATHS } from '../../utils/icons';
 import { labelAttrs } from '../../utils/labelPosition';
 
-const DEFAULT_ICON_COLOR = '#1976d2';
+export const ICON_FILL_RATIO = 0.6;
+export const CORNER_RADIUS_RATIO = 0.2;
+const DEFAULT_RECT_COLOR = '#1976d2';
 
-export interface IconNodeProps {
+export interface RectangleNodeProps {
   node: NodeSpec;
   nodeSize: number;
   half: number;
   displayLabel: string | undefined;
   fillOverride: string | undefined;
-  rectProps?: SVGProps<SVGRectElement>;
+  rectProps?: React.SVGProps<SVGRectElement>;
 }
 
-export function IconNode({ node, nodeSize, half, displayLabel, fillOverride, rectProps }: IconNodeProps): ReactElement {
-  const iconPath = node.icon ? ICON_PATHS[node.icon] : undefined;
-  const iconScale = nodeSize / 24;
+export function RectangleNode({
+  node,
+  nodeSize,
+  half,
+  displayLabel,
+  fillOverride,
+  rectProps,
+}: RectangleNodeProps): ReactElement {
+  const iconSize = nodeSize * ICON_FILL_RATIO;
+  const iconScale = iconSize / 24;
+  const cornerRadius = nodeSize * CORNER_RADIUS_RATIO;
   const lAttrs = labelAttrs(half, node.labelPosition, node.labelPadding);
-  const iconColor = fillOverride ?? DEFAULT_ICON_COLOR;
+  const iconPath = node.icon ? ICON_PATHS[node.icon] : undefined;
+  const fill = fillOverride ?? DEFAULT_RECT_COLOR;
 
   return (
     <>
@@ -40,16 +51,20 @@ export function IconNode({ node, nodeSize, half, displayLabel, fillOverride, rec
         y={-half}
         width={nodeSize}
         height={nodeSize}
-        fill="transparent"
-        stroke="transparent"
+        rx={cornerRadius}
+        ry={cornerRadius}
+        fill={fill}
+        stroke="white"
+        strokeWidth={2}
         {...rectProps}
       />
-      {iconPath ? (
-        <g transform={`translate(${-half},${-half}) scale(${iconScale})`} style={{ pointerEvents: 'none' }}>
-          <path d={iconPath} fill={iconColor} />
+      {iconPath && (
+        <g
+          transform={`translate(${-iconSize / 2},${-iconSize / 2}) scale(${iconScale})`}
+          style={{ pointerEvents: 'none' }}
+        >
+          <path d={iconPath} fill="white" />
         </g>
-      ) : (
-        <circle r={half} fill={iconColor} style={{ pointerEvents: 'none' }} />
       )}
       {displayLabel && (
         <text
@@ -58,6 +73,7 @@ export function IconNode({ node, nodeSize, half, displayLabel, fillOverride, rec
           textAnchor={lAttrs.textAnchor}
           dominantBaseline={lAttrs.dominantBaseline}
           fill="currentColor"
+          fontSize={12}
           style={{ pointerEvents: 'none', userSelect: 'none' }}
         >
           {displayLabel}

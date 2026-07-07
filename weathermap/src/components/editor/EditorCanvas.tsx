@@ -11,17 +11,18 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-import React, { KeyboardEvent, PointerEvent, ReactElement, useLayoutEffect, useRef } from 'react';
+import { KeyboardEvent, PointerEvent, ReactElement, useLayoutEffect, useRef } from 'react';
 import { produce } from 'immer';
-import { AnchorPoint, WeathermapOptions } from '../../types/weathermap-types';
-import { anchorPosition, snapTarget } from '../../utils/edgeUtils';
+import { AnchorPoint } from '../../model';
 import { nodeBBox } from '../../utils/resizeUtils';
-import { getEditorTheme } from '../../utils/editorTheme';
-import { EditorAction, EditorState } from '../../utils/editorReducer';
-import { computeSelectionFromRect } from '../../utils/selectionUtils';
 import { useZoom } from '../../hooks/useZoom';
-import { createResizeHandlers } from '../../utils/resizeHandlers';
-import { createEdgeHandlers } from '../../utils/edgeHandlers';
+import { useZoomContext, ZoomProvider } from '../../contexts/ZoomContext';
+import { useNodeMove } from '../../hooks/useNodeMove';
+import { useEdgeConnect } from '../../hooks/useEdgeConnect';
+import { useResize } from '../../hooks/useResize';
+import { useRectSelect } from '../../hooks/useRectSelect';
+import { useEditorContext } from '../../contexts/EditorContext';
+import { useSpecContext } from '../../contexts/SpecContext';
 import { EditorEdge } from './EditorEdge';
 import { EditorNode } from './EditorNode';
 import { SelectionBoundingBox } from './SelectionBoundingBox';
@@ -30,78 +31,45 @@ import { SelectionRectOverlay } from './SelectionRectOverlay';
 
 const CANVAS_WIDTH = 600;
 const CANVAS_HEIGHT = 400;
-const SNAP_RADIUS = 20;
 const NS_PREFIX = 'wm-arrow-editor';
 
-// Returns true when the pointer event is a middle-mouse-button press, which
-// d3-zoom exclusively uses for panning — canvas interactions should ignore it.
-function isPanGesture(event: PointerEvent): boolean {
-  return event.button === 1;
+function isActivePointerMove(event: PointerEvent): boolean {
+  return event.buttons !== 0;
 }
 
-// Returns true when the pointer landed on a node rect or connection-handle cross
-// rather than on the bare canvas background, so those elements can handle the
-// event themselves without triggering a selection-rect drag.
-function isCanvasBackground(event: PointerEvent<SVGSVGElement>): boolean {
-  if (!(event.target instanceof Element)) {
-    return false;
-  }
-  return !event.target.closest('rect') && !event.target.closest('[data-cross]');
+interface EditorCanvasSvgProps {
+  svgRef: (node: SVGSVGElement | null) => void;
 }
 
-interface EditorCanvasProps {
-  value: WeathermapOptions;
-  onChange: (v: WeathermapOptions) => void;
-  state: EditorState;
-  dispatch: React.Dispatch<EditorAction>;
-  viewCenterRef?: React.MutableRefObject<() => { x: number; y: number }>;
-}
+function EditorCanvasSvg({ svgRef }: EditorCanvasSvgProps): ReactElement {
+  const { value, onChange, nodes, edges, nodeById } = useSpecContext();
+  const { state, dispatch } = useEditorContext();
+  const { transform, toCanvasPoint, fitView } = useZoomContext();
 
-const _renderCount = { n: 0 };
+  const edgeById = new Map(edges.map((e) => [e.id, e]));
 
-export function EditorCanvas({ value, onChange, state, dispatch, viewCenterRef }: EditorCanvasProps): ReactElement {
-  const { applyZoomBehaviour, transform, fitView, toSvgPoint } = useZoom();
-  const nodes = value.nodes ?? [];
-  const edges = value.edges ?? [];
+  const { startMove, applyMove } = useNodeMove(value, onChange, state.selectedIds, transform);
+  const { startEdgeDrag, startEndpointDrag, updateEdgeDrag, commitEdgeDrag } =
+    useEdgeConnect(value, onChange, nodes, nodeById, edgeById, toCanvasPoint);
+  const { startResize, applyResize, commitResize } =
+    useResize(value, onChange, state.selectedIds, toCanvasPoint);
+  const { startSelection, updateSelection, commitSelection } =
+    useRectSelect(nodes, edges, toCanvasPoint);
 
-  if (viewCenterRef) {
-    viewCenterRef.current = () => ({
-      x: transform.invertX(CANVAS_WIDTH / 2),
-      y: transform.invertY(CANVAS_HEIGHT / 2),
-    });
-  }
-
-  _renderCount.n += 1;
-  console.log(
-    `[EditorCanvas] render #${_renderCount.n} — nodes:${nodes.length} transform:${transform.toString()} ts:${Date.now()}`
-  );
-
-  // Keep a ref to the latest nodes so the one-shot fit effect can read them
-  // without taking a dependency on the nodes array (which is a new reference
-  // every render due to the `?? []` fallback).
   const nodesRef = useRef(nodes);
   nodesRef.current = nodes;
 
-  // Fit all nodes into view on first render. Runs exactly once: empty deps array
-  // means it fires after the first paint; nodesRef.current gives the current
-  // snapshot without making nodes a dependency that re-triggers on every update.
   const didFitRef = useRef(false);
   useLayoutEffect(() => {
-    const currentNodes = nodesRef.current;
-    console.log(
-      `[EditorCanvas] fitView effect — didFit:${didFitRef.current} nodes:${currentNodes.length} ts:${Date.now()}`
-    );
-    if (didFitRef.current || currentNodes.length === 0) {
+    if (didFitRef.current || nodesRef.current.length === 0) {
       return;
     }
-    const bbox = nodeBBox(currentNodes);
+    const bbox = nodeBBox(nodesRef.current);
     if (bbox) {
-      console.log('[EditorCanvas] calling fitView — bbox:', bbox);
       fitView(bbox, CANVAS_WIDTH, CANVAS_HEIGHT);
       didFitRef.current = true;
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [fitView]);
 
   const { mode, selectedIds, hoveredId } = state;
   const selectionRect = mode.type === 'selecting' ? mode.rect : null;
@@ -120,141 +88,56 @@ export function EditorCanvas({ value, onChange, state, dispatch, viewCenterRef }
         )
       : null;
 
-  const nodeById = new Map(nodes.map((n) => [n.id, n]));
-  const edgeById = new Map(edges.map((ed) => [ed.id, ed]));
-
-  const theme = getEditorTheme(transform.k);
-
-  const { applyResize, onResizeHandlePointerDown } = createResizeHandlers({
-    value,
-    onChange,
-    dispatch,
-    selectedNodes,
-    selectedFloatingEdges,
-  });
-
-  const { onCrossDragStart, commitEdgeDrag, onEdgeEndpointPointerDown } = createEdgeHandlers({
-    value,
-    onChange,
-    dispatch,
-    nodes,
-    nodeById,
-    edgeById,
-    toSvgPoint,
-  });
-
-  function onNodePointerDown(event: PointerEvent<SVGRectElement>, id: string) {
-    event.stopPropagation();
-    event.currentTarget.setPointerCapture(event.pointerId);
-    if (!selectedIds.has(id)) {
-      dispatch({ type: 'SELECT_NODES', ids: new Set([id]) });
+  function onSvgPointerMove(event: PointerEvent<SVGSVGElement>): void {
+    switch (mode.type) {
+      case 'resizing':
+        if (isActivePointerMove(event)) {
+          applyResize(event, mode.multiResizeDrag);
+        }
+        break;
+      case 'dragging-edge':
+        if (isActivePointerMove(event)) {
+          dispatch(updateEdgeDrag(event, mode.dragEdge));
+        }
+        break;
+      case 'selecting':
+        if (isActivePointerMove(event)) {
+          dispatch(updateSelection(event));
+        }
+        break;
     }
   }
 
-  function onNodePointerMove(event: PointerEvent<SVGRectElement>, id: string) {
-    const isDraggingSelectedNode = event.buttons !== 0 && selectedIds.has(id);
-    if (!isDraggingSelectedNode) {
-      return;
+  function onSvgPointerUp(event: PointerEvent<SVGSVGElement>): void {
+    switch (mode.type) {
+      case 'resizing':
+        dispatch(commitResize());
+        break;
+      case 'dragging-edge':
+        dispatch(commitEdgeDrag(event, mode.dragEdge));
+        break;
+      case 'selecting':
+        dispatch(commitSelection(mode.rect));
+        break;
     }
-    // movementX/Y are in screen pixels; dividing by transform.k converts to canvas
-    // coordinates so movement distance stays consistent regardless of zoom level.
-    const dx = event.movementX / transform.k;
-    const dy = event.movementY / transform.k;
-    onChange(
-      produce(value, (draft) => {
-        (draft.nodes ?? []).forEach((n) => {
-          if (selectedIds.has(n.id)) {
-            n.x += dx;
-            n.y += dy;
-          }
-        });
-        (draft.edges ?? []).forEach((edge) => {
-          if (selectedIds.has(edge.id) && edge.x2 && edge.y2) {
-            edge.x2 += dx;
-            edge.y2 += dy;
-          }
-        });
-      })
-    );
   }
 
-  function onSvgPointerDown(event: PointerEvent<SVGSVGElement>) {
-    if (isPanGesture(event)) {
-      return;
-    }
-    if (!isCanvasBackground(event)) {
-      return;
-    }
+  function onSvgPointerDown(event: PointerEvent<SVGSVGElement>): void {
     if (mode.type !== 'idle') {
       return;
     }
-    event.currentTarget.focus();
-    event.currentTarget.setPointerCapture(event.pointerId);
-    const pt = toSvgPoint(event);
-    dispatch({ type: 'SELECTION_RECT_START', x: pt.x, y: pt.y });
-  }
-
-  function onSvgPointerMove(event: PointerEvent<SVGSVGElement>) {
-    const isPointerActive = event.buttons !== 0;
-    if (!isPointerActive) {
-      return;
-    }
-    const point = toSvgPoint(event);
-
-    switch (mode.type) {
-      case 'resizing': {
-        applyResize(point, mode.multiResizeDrag);
-        return;
-      }
-      case 'dragging-edge': {
-        const snap = snapTarget(nodes, point, mode.dragEdge.sourceId, SNAP_RADIUS);
-        dispatch({
-          type: 'DRAG_EDGE_UPDATE',
-          x2: snap ? anchorPosition(snap.node, snap.anchor).x : point.x,
-          y2: snap ? anchorPosition(snap.node, snap.anchor).y : point.y,
-          snapTargetId: snap?.node.id,
-          snapTargetAnchor: snap?.anchor,
-        });
-        return;
-      }
-      case 'selecting': {
-        dispatch({ type: 'SELECTION_RECT_UPDATE', x: point.x, y: point.y });
-        return;
-      }
-      case 'idle': {
-        return;
-      }
+    const action = startSelection(event);
+    if (action) {
+      dispatch(action);
     }
   }
 
-  function onSvgPointerUp(event: PointerEvent<SVGSVGElement>) {
-    switch (mode.type) {
-      case 'resizing': {
-        dispatch({ type: 'RESIZE_END' });
-        return;
-      }
-      case 'dragging-edge': {
-        commitEdgeDrag(event, mode.dragEdge);
-        dispatch({ type: 'DRAG_EDGE_END' });
-        return;
-      }
-      case 'selecting': {
-        const hit = computeSelectionFromRect(mode.rect, nodes, edges);
-        dispatch({ type: 'SELECTION_RECT_COMMIT', selectedIds: hit });
-        return;
-      }
-      case 'idle': {
-        return;
-      }
-    }
-  }
-
-  function onEdgeClick(event: PointerEvent<SVGLineElement>, edgeId: string) {
+  function onEdgeClick(event: PointerEvent<SVGLineElement>, edgeId: string): void {
     event.stopPropagation();
     dispatch({ type: 'SELECT_NODES', ids: new Set([edgeId]) });
   }
 
-  function onKeyDown(event: KeyboardEvent<SVGSVGElement>) {
+  function onKeyDown(event: KeyboardEvent<SVGSVGElement>): void {
     if (event.key !== 'Delete' && event.key !== 'Backspace') {
       return;
     }
@@ -273,7 +156,7 @@ export function EditorCanvas({ value, onChange, state, dispatch, viewCenterRef }
 
   return (
     <svg
-      ref={applyZoomBehaviour}
+      ref={svgRef}
       width={CANVAS_WIDTH}
       height={CANVAS_HEIGHT}
       tabIndex={0}
@@ -304,16 +187,22 @@ export function EditorCanvas({ value, onChange, state, dispatch, viewCenterRef }
             isSelected={selectedIds.has(node.id)}
             snapTarget={dragEdge?.snapTargetId === node.id}
             isDragging={dragEdge !== null}
-            theme={theme}
-            onPointerDown={(event) => onNodePointerDown(event, node.id)}
-            onPointerMove={(event) => onNodePointerMove(event, node.id)}
+            onPointerDown={(event) => {
+              const action = startMove(event, node.id);
+              if (action) {
+                dispatch(action);
+              }
+            }}
+            onPointerMove={(event) => applyMove(event, node.id)}
             onMouseEnter={() => {
               if (!dragEdge) {
                 dispatch({ type: 'HOVER_NODE', id: node.id });
               }
             }}
             onMouseLeave={() => dispatch({ type: 'UNHOVER_NODE', id: node.id })}
-            onCrossDragStart={(anchor: AnchorPoint, x: number, y: number) => onCrossDragStart(node.id, anchor, x, y)}
+            onCrossDragStart={(anchor: AnchorPoint, x: number, y: number) => {
+              dispatch(startEdgeDrag(node.id, anchor, x, y));
+            }}
           />
         ))}
 
@@ -326,11 +215,13 @@ export function EditorCanvas({ value, onChange, state, dispatch, viewCenterRef }
             isDragging={dragEdge !== null}
             nsPrefix={NS_PREFIX}
             k={transform.k}
-            theme={theme}
             onEdgeClick={(event) => onEdgeClick(event, edge.id)}
-            onEndpointPointerDown={(event, end, fixedX, fixedY, fixedNodeId, fixedAnchor) =>
-              onEdgeEndpointPointerDown(event, edge.id, end, fixedX, fixedY, fixedNodeId, fixedAnchor)
-            }
+            onEndpointPointerDown={(event, end, fixedX, fixedY, fixedNodeId, fixedAnchor) => {
+              const action = startEndpointDrag(event, edge.id, end, fixedX, fixedY, fixedNodeId, fixedAnchor);
+              if (action) {
+                dispatch(action);
+              }
+            }}
           />
         ))}
 
@@ -338,15 +229,29 @@ export function EditorCanvas({ value, onChange, state, dispatch, viewCenterRef }
           <SelectionBoundingBox
             bbox={selectionBoundingBox}
             isResizing={multiResizeDrag !== null}
-            theme={theme}
-            onResizeHandlePointerDown={onResizeHandlePointerDown}
+            onResizeHandlePointerDown={(event, handleId) => {
+              const action = startResize(event, handleId);
+              if (action) {
+                dispatch(action);
+              }
+            }}
           />
         )}
 
-        {dragEdge && <DragEdgeLine dragEdge={dragEdge} k={transform.k} nsPrefix={NS_PREFIX} theme={theme} />}
+        {dragEdge && <DragEdgeLine dragEdge={dragEdge} k={transform.k} nsPrefix={NS_PREFIX} />}
 
-        {selectionRect && <SelectionRectOverlay rect={selectionRect} theme={theme} />}
+        {selectionRect && <SelectionRectOverlay rect={selectionRect} />}
       </g>
     </svg>
+  );
+}
+
+export function EditorCanvas(): ReactElement {
+  const { svgRef, toCanvasPoint, transform, fitView } = useZoom();
+
+  return (
+    <ZoomProvider value={{ toCanvasPoint, transform, fitView }}>
+      <EditorCanvasSvg svgRef={svgRef} />
+    </ZoomProvider>
   );
 }

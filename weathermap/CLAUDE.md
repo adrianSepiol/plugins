@@ -1,6 +1,9 @@
 # CLAUDE.md
 
-This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+This file provides guidance to Claude Code when working on the weathermap plugin.
+Always read this file before making any changes.
+
+---
 
 ## Commands
 
@@ -14,112 +17,256 @@ npm run type-check   # TypeScript type check (no emit)
 npm run test         # Jest tests (LC_ALL=C TZ=UTC)
 ```
 
-Run a single test file:
-```bash
-npx jest src/panels/weathermap/SomeTest.test.ts
-```
+---
 
-## Architecture
+## Guiding principle — breaking changes are welcome
 
-This is a Perses **panel plugin** — a standalone npm package loaded at runtime via Module Federation into the Perses UI. It is part of the larger `plugins/` monorepo (see `../CLAUDE.md`).
+This plugin is not yet released. There are no consumers, no published API, no
+compatibility contract to honour. Every decision should aim for the best possible code.
+If a cleaner design requires renaming, restructuring, or removing anything that exists
+today, do it. Never make a subpar decision to preserve the current shape of the code.
 
-### Entry points
+---
+
+## Architecture overview
+
+A Perses panel plugin loaded at runtime via Module Federation. Entry points:
 
 - `src/index.ts` — library entry (re-exports `getPluginModule`)
-- `src/index-federation.ts` — Module Federation entry (async bootstraps `src/bootstrap.tsx`)
-- `src/getPluginModule.ts` — reads `package.json#perses` and returns a `PluginModuleResource`
+- `src/index-federation.ts` — Module Federation entry
+- `src/Weathermap.tsx` — wires `WeathermapPanel` + `GlobalSettingsEditor` into the plugin object
 
-### Plugin registration
+`@perses-dev/*` packages are `peerDependencies` — provided at runtime, must not be bundled.
 
-`package.json#perses.plugins` declares the plugin kind (`Panel`) and display name. `rsbuild.config.ts` exposes `./Weathermap` via Module Federation, which maps to `src/panels/weathermap/`.
+### Target file structure
 
-### Panel structure (`src/panels/weathermap/`)
-
-| File | Role |
-|---|---|
-| `Weathermap.tsx` | `PanelPlugin` object wiring component + settings editor |
-| `WeathermapComponent.tsx` | The rendered panel — receives `PanelProps<WeathermapOptions, QueryData>` |
-| `WeathermapSettingsEditor.tsx` | Options editor UI (legend, thresholds) |
-| `weathermap-types.ts` | `WeathermapOptions`, `WeathermapProps`, `QuerySettingsOptions` |
-
-`WeathermapComponent` receives `contentDimensions`, `queryResults`, and `spec` from the panel plugin system. It uses D3 for rendering and `@dnd-kit/react` + `react-grid-layout` for drag interactions (currently in active development — much is commented out).
-
-### CUE schema
-
-`schemas/panels/weathermap/weathermap.cue` defines the spec contract (`kind: "Weathermap"`). It uses types from `github.com/perses/shared/cue/common`. Schema validation runs via `make test-schemas-plugins` from the `plugins/` root.
-
-### Dependencies note
-
-`@perses-dev/*` packages are `peerDependencies` — they are provided at runtime by the host app and must not be bundled. `d3` is a direct `dependency` and is bundled.
-
-### Editor component structure (`src/panels/weathermap/editor/`)
-
-| File | Role |
-|---|---|
-| `WeathermapNodeEditor.tsx` | Top-level editor shell: reducer, add-node button, side panel |
-| `WeathermapCanvas.tsx` | SVG canvas with all pointer interaction logic |
-| `EditorNode.tsx` | Single node rect + connection-handle cross |
-| `EditorEdge.tsx` | Single edge line + drag endpoint handles when selected |
-| `SelectionBoundingBox.tsx` | Dashed bounding box + resize handles around the current selection |
-| `DragEdgeLine.tsx` | Dashed line preview while dragging a new or existing edge |
-| `SelectionRectOverlay.tsx` | Blue rectangle drawn during drag-select |
-| `editorReducer.ts` | Reducer + `EditorMode` discriminated union |
-| `editorTheme.ts` | `EditorTheme` interface + `getEditorTheme(k)` |
-| `useZoom.ts` | d3-zoom wrapper; exposes `transform`, `toSvgPoint`, `resetPan` |
-
-#### Interaction state — `EditorMode` discriminated union
-
-The canvas tracks ongoing pointer interactions via a single `mode` field (a discriminated union) rather than nullable refs. The four variants are `idle`, `selecting`, `dragging-edge`, and `resizing`. Pointer handlers `switch (mode.type)` to decide what to do; this eliminates impossible state combinations and stale-ref bugs.
-
-```typescript
-type EditorMode =
-  | { type: 'idle' }
-  | { type: 'selecting'; rect: SelectionRect }
-  | { type: 'dragging-edge'; dragEdge: DragEdge }
-  | { type: 'resizing'; multiResizeDrag: MultiResizeDrag };
+```
+src/
+├── model.ts                          ← spec types (WeathermapSpec, NodeSpec, EdgeSpec, …)
+│
+├── hooks/
+│   ├── useZoom.ts                    ← d3-zoom setup; returns svgRef + zoomContextValue; called only at canvas roots
+│   ├── useWeathermapTheme.ts         ← shared design tokens
+│   ├── useNodeMove.ts                ← editor interaction: drag nodes
+│   ├── useEdgeConnect.ts             ← editor interaction: draw/reconnect edges
+│   ├── useResize.ts                  ← editor interaction: scale selection
+│   └── useRectSelect.ts              ← editor interaction: rubber-band selection
+│
+├── contexts/
+│   ├── ZoomContext.tsx               ← ZoomContextValue, useZoomContext, ZoomProvider
+│   └── EditorContext.ts              ← value/onChange/state/dispatch + derived maps
+│
+├── components/
+│   ├── shared/                       ← no context deps; used by both panel and editor
+│   │   ├── NodeRenderer.tsx
+│   │   ├── RectangleNode.tsx
+│   │   ├── IconNode.tsx
+│   │   ├── TextNode.tsx
+│   │   ├── EdgeLines.tsx
+│   │   └── EdgeLabel.tsx
+│   │
+│   ├── editor/
+│   │   ├── WeathermapEditor.tsx      ← EditorContext.Provider + item CRUD
+│   │   ├── EditorCanvas.tsx          ← SVG markup + pointer routing only; no logic
+│   │   ├── EditorNode.tsx
+│   │   ├── EditorEdge.tsx
+│   │   ├── ConnectionHandles.tsx
+│   │   ├── SelectionBoundingBox.tsx
+│   │   ├── SelectionRectOverlay.tsx
+│   │   ├── DragEdgeLine.tsx
+│   │   ├── IconPreview.tsx
+│   │   ├── IconPicker.tsx
+│   │   ├── NodePropertiesPanel.tsx
+│   │   └── EdgePropertiesPanel.tsx
+│   │
+│   ├── panel/
+│   │   ├── WeathermapPanel.tsx       ← layout + zoom only
+│   │   ├── PanelEdgeLayer.tsx        ← query resolution + edge rendering
+│   │   ├── PanelNodeLayer.tsx        ← query resolution + node rendering
+│   │   └── ThresholdLegend.tsx
+│   │
+│   └── settings/
+│       ├── GlobalSettingsEditor.tsx  ← Composition Root; no logic
+│       ├── LegendSettings.tsx
+│       ├── BackgroundSettings.tsx
+│       └── EdgeThicknessSettings.tsx
+│
+└── utils/
+    ├── editorReducer.ts              ← reducer + all editor interaction types
+    ├── editorStyles.ts               ← zoom-scaled SVG style props (no colors)
+    ├── edgeUtils.ts
+    ├── resizeUtils.ts
+    ├── selectionUtils.ts
+    ├── labelPosition.ts
+    └── icons.ts
 ```
 
-#### Coordinate conversion — `toSvgPoint`
+### Folder import rules
 
-`useZoom` owns `toSvgPoint(event)`, which closes over the current `transform` and the SVG element ref, converting pointer-event client coordinates to canvas coordinates. Pass `toSvgPoint` down rather than threading `transform` through callers. The `svgEl` argument is intentionally absent — the hook owns the ref.
+The folder a file lives in defines what it may import. Violations are bugs in the
+structure, not just style issues.
 
-#### Named event guards
+| Folder | Context dependency | May import from |
+|--------|--------------------|-----------------|
+| `components/shared/` | none | `utils/`, `hooks/` (not context hooks), `model.ts` |
+| `components/panel/` | `ZoomContext` | `components/shared/`, `contexts/ZoomContext`, `utils/`, `hooks/useZoom`, `hooks/useWeathermapTheme`, `model.ts` |
+| `components/editor/` | `EditorContext`, `ZoomContext` | `components/shared/`, `contexts/`, `hooks/`, `utils/`, `model.ts` |
+| `components/settings/` | none, except `GlobalSettingsEditor` may import `components/editor/` | `components/editor/` (GlobalSettingsEditor only), `utils/`, `model.ts` |
+| `contexts/` | defines context | `utils/`, `model.ts` |
+| `hooks/` | may consume `EditorContext` or `ZoomContext` | `contexts/`, `utils/`, `model.ts` |
+| `utils/` | none | `model.ts` only — no React, no context, no hooks |
 
-Inline conditions on pointer events should be extracted to named boolean helpers so their intent is self-documenting:
+- `components/shared/` must never import from `contexts/` or `components/editor/`.
+- `components/panel/` must never import from `components/editor/` or `EditorContext`.
+- `utils/` files are pure functions or plain data. No React imports anywhere in `utils/`.
+- `useZoom` (setup) is called only in `EditorCanvas` and `WeathermapPanel`. All other consumers call `useZoomContext`.
 
-```typescript
-function isPanGesture(event: PointerEvent): boolean { return event.button === 1; }
-function isCanvasBackground(event: PointerEvent<SVGSVGElement>): boolean { ... }
+---
+
+## Component role taxonomy
+
+Every component has exactly one role. The role determines what is and is not allowed inside it.
+
+### Composition Root
+
+Instantiates dependencies and wires them together. No business logic, no state, no
+event handlers — just layout and wiring. `GlobalSettingsEditor` is the only one.
+
+**Disallowed:** `useState`, `useEffect`, handler functions, `onChange` calls.
+
+### Provider / Context Owner
+
+Owns state and exposes it to a subtree via context. `WeathermapEditor` is the only one:
+holds `useReducer`, computes derived maps, wraps children in `EditorContext.Provider`.
+
+**Rule:** One provider per feature boundary. Never nest two providers for the same concern.
+
+### Presentational / Primitive
+
+Pure rendering component. No context dependency. All data arrives through props.
+`RectangleNode`, `EdgeLines`, `ThresholdLegend` are examples.
+
+**Disallowed:** `useContext` calls of any kind.
+
+### Feature Component
+
+Consumes context and owns one coherent piece of UI behaviour. `EditorCanvas` (pointer
+routing), `NodePropertiesPanel` (form for a node), `PanelEdgeLayer` (resolution + rendering).
+
+**Rule:** Consumes at most one context. Needing two unrelated contexts means it is doing too much.
+
+---
+
+## Canvas interaction pattern
+
+### Interaction map
+
+```
+                    Panel    Editor
+                   ───────  ──────
+Pan               │  ✓    │   ✓  │  ← useZoom (d3, shared)
+Zoom              │  ✓    │   ✓  │  ← useZoom (d3, shared)
+Select            │       │   ✓  │  ← useRectSelect
+Move              │       │   ✓  │  ← useNodeMove
+Connect edge      │       │   ✓  │  ← useEdgeConnect
+Resize            │       │   ✓  │  ← useResize
 ```
 
-#### Extract complex pointer logic into named helpers
+### Rule: one hook per interaction
 
-Non-trivial work triggered by pointer events (e.g. resize math, edge-commit logic) should be extracted into named functions (`applyResize`, `commitEdgeDrag`) rather than inlined in the handler body. When a handler does two distinct things depending on a condition (e.g. creating vs updating), split it into two focused functions and call them from a thin dispatcher.
+Each canvas interaction gets its own hook. The hook owns everything about that
+interaction: the slice of `EditorMode` it reads, the event handlers it returns, and
+the model mutations it performs.
 
-#### Keep dispatch calls in the caller, not inside data-update helpers
+`EditorCanvas` is a pure router — it calls hooks and wires their return values to JSX
+props. It must contain no interaction logic, no `onChange` calls, no `dispatch` calls.
+If you find logic in `EditorCanvas` that is not JSX prop wiring, it belongs in a hook.
 
-Functions that call `onChange` to update model state should not also call `dispatch` to update editor state — those are two separate concerns. The dispatcher (`commitEdgeDrag`) calls the data helper, then dispatches the mode transition itself. This makes each function do one thing.
+Each interaction hook:
+- reads `EditorContext` internally (no prop arguments for value/onChange/dispatch)
+- checks `mode.type` at the start of its handlers and bails if the mode is not its own
+- owns exactly one `EditorMode` variant
 
-#### Push endpoint-routing logic down into the child component
+This is Single Responsibility at the hook level: adding a new interaction means adding
+a new hook, not modifying existing ones.
 
-When a parent passes a callback to a child that includes routing logic based on which endpoint was clicked (`end === 'source'`), move that logic into the child. The child already knows which circle was pressed and can resolve `fixedX/Y/nodeId/anchor` from its own props, then call the parent with the resolved values. This keeps the parent's JSX lean and the child self-contained.
+### EditorContext shape
 
-#### Scale SVG markers with zoom
+```typescript
+interface EditorContextValue {
+  value: WeathermapSpec;
+  onChange: (v: WeathermapSpec) => void;
+  state: EditorState;
+  dispatch: React.Dispatch<EditorAction>;
+  nodes: NodeSpec[];
+  edges: EdgeSpec[];
+  nodeById: Map<string, NodeSpec>;
+  edgeById: Map<string, EdgeSpec>;
+}
+```
 
-The `<marker>` element in `<defs>` is in screen space by default. Use `markerUnits="userSpaceOnUse"` and divide all marker dimensions (`markerWidth`, `markerHeight`, `refX`, `refY`, and path coordinates) by `transform.k` so the arrowhead stays the same visual size at all zoom levels.
+---
 
-#### Avoid abbreviations in event handler parameters
+## Theme
 
-Use `event` not `e` for all event handler parameters — applies to function signatures, prop type interfaces, and JSX lambda expressions. Applies across all files.
+Two distinct concerns must not be conflated:
 
-#### Avoid abbreviations in type names
+**Design tokens** — colors, what things *look* like. Come from MUI `useTheme()` and
+Perses `useChartsTheme()`. Exposed via `useWeathermapTheme()`, consumed by both panel
+and editor. No hardcoded hex colors anywhere in components.
 
-Use full words in type and interface names: `BoundingBox` not `BBox`, `SelectionBoundingBox` not `SelectionBBox`. Abbreviations obscure intent for future readers.
+**Zoom scaling** — dimensions, what things *measure*. Stroke widths and radii divided
+by `transform.k` so elements stay visually constant at all zoom levels. Lives in
+`utils/editorStyles.ts` as a pure function `editorStyles(theme, k)`. Not a theme concern.
 
-#### Compute derived selection state once at render scope
+```typescript
+function useWeathermapTheme(): WeathermapTheme {
+  const muiTheme = useTheme();
+  const chartsTheme = useChartsTheme();
+  return {
+    palette: chartsTheme.thresholds.palette,
+    selection: muiTheme.palette.warning.main,
+    connection: muiTheme.palette.info.main,
+    snapHighlight: muiTheme.palette.success.main,
+    background: muiTheme.palette.background.paper,
+    divider: muiTheme.palette.divider,
+    text: muiTheme.palette.text.primary,
+  };
+}
+```
 
-Selection-derived data (e.g. `selectedNodes`, `selectedFloatingEdges`, `selectionBoundingBox`) should be computed once at the top of the render function and reused by both JSX and event handlers. This avoids duplicated filter/map logic and keeps sub-components' prop lists minimal — pass `bbox` rather than `nodes + edges + selectedIds`.
+---
+
+## Naming
+
+### Key renames from old codebase
+
+| Old | New | Reason |
+|-----|-----|--------|
+| `WeathermapOptions` | `WeathermapSpec` | It is the full map model, not just display options. Matches `NodeSpec`/`EdgeSpec` and the CUE `spec:` field. |
+| `WeathermapOptionsEditorProps` | `WeathermapSpecEditorProps` | Follows from above. |
+| `QuerySettingsOptions` | `QueryColorSettings` | Describes per-query color overrides, not generic options. |
+| `EditorTheme` / `getEditorTheme` | `EditorStyles` / `editorStyles` | Holds no colors after theme unification — only zoom-scaled SVG props. |
+
+### Rules
+
+- No abbreviations in type names: `BoundingBox` not `BBox`, `SelectionBoundingBox` not `SelectionBBox`.
+- No abbreviations in event handler parameters: `event` not `e`, everywhere.
+- Hook names that consume `EditorContext` are prefixed with their interaction (`useEdgeConnect`, `useNodeMove`) so scope is obvious without opening the file.
+
+---
 
 ## Code style
 
-- Always use curly braces for `if`, `for`, `while`, and similar block statements — even for single-line bodies.
+- Always use curly braces for `if`, `for`, `while` — even single-line bodies.
+- No comments that describe *what* the code does. Only comment the *why* when it is
+  non-obvious (a hidden constraint, a workaround, a subtle invariant).
+- Named event guards over inline conditions on pointer events:
+  ```typescript
+  function isPanGesture(event: PointerEvent): boolean { return event.button === 1; }
+  ```
+- Separate `onChange` (model mutation) from `dispatch` (editor state transition).
+  A function that calls `onChange` must not also call `dispatch` — those are two concerns.
+- Compute derived selection state once at render scope; pass the derived value to
+  sub-components rather than re-deriving inside them.
+- Keep `dispatch` calls in the caller, not inside data-update helpers.

@@ -16,10 +16,9 @@ import { midpoint, shortenLine } from '../../utils/edgeUtils';
 
 // Arrow geometry in stroke-width units (markerUnits="strokeWidth").
 // The marker scales with both stroke width and zoom automatically.
-const ARROW_SW_W = 2.5; // arrowhead length in stroke-width units
-const ARROW_SW_H = 1.75; // arrowhead height in stroke-width units
+const ARROW_SW_W = 2.5;
+const ARROW_SW_H = 1.75;
 
-// How many stroke-width units to shorten the line so the tip sits flush.
 export const ARROW_SHORTEN_PX = ARROW_SW_W;
 
 type Line = { x1: number; y1: number; x2: number; y2: number };
@@ -36,8 +35,6 @@ function computeEdgeGeometry(
   strokeWidth: number,
   bwdStrokeWidth: number
 ): EdgeGeometry {
-  // strokeWidth is in canvas units (screen px / k); multiply by stroke-width
-  // units to get the canvas-unit shorten amount.
   const fwdShorten = ARROW_SHORTEN_PX * strokeWidth;
   const bwdShorten = ARROW_SHORTEN_PX * bwdStrokeWidth;
 
@@ -72,8 +69,6 @@ interface EdgeArrowMarkerProps {
   fillOpacity?: number;
 }
 
-// markerUnits="strokeWidth": dimensions scale with stroke width automatically,
-// which also handles zoom since stroke width is pre-divided by k.
 export function EdgeArrowMarker({ nsPrefix, fillOpacity = 0.8 }: EdgeArrowMarkerProps): ReactElement {
   return (
     <marker

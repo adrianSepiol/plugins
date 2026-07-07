@@ -11,7 +11,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-import type { BoundingBox, ResizeHandleId } from '../types/editor-types';
+import type { BoundingBox, ResizeHandleId } from './editorReducer';
 
 export function nodeBBox(
   nodes: Array<{ x: number; y: number; size: number }>,

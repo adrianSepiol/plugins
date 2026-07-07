@@ -13,34 +13,31 @@
 
 import { PointerEvent } from 'react';
 import { produce } from 'immer';
-import type { NodeSpec, EdgeSpec, WeathermapOptions } from '../types/weathermap-types';
-import type { MultiResizeDrag, ResizeHandleId } from '../types/editor-types';
+import { NodeSpec, WeathermapSpec } from '../model';
+import { EditorAction, MultiResizeDrag, ResizeHandleId } from '../utils/editorReducer';
 import { HANDLE_POSITIONS, handlePosition, nodeBBox, OPPOSITE_HANDLE } from '../utils/resizeUtils';
-import type { EditorAction } from '../utils/editorReducer';
 
 const MIN_NODE_SIZE = 8;
 
-export interface ResizeHandlersOptions {
-  value: WeathermapOptions;
-  onChange: (v: WeathermapOptions) => void;
-  dispatch: React.Dispatch<EditorAction>;
-  selectedNodes: NodeSpec[];
-  selectedFloatingEdges: EdgeSpec[];
+interface UseResizeResult {
+  startResize: (event: PointerEvent<SVGCircleElement>, handleId: ResizeHandleId) => EditorAction | null;
+  applyResize: (event: PointerEvent<SVGSVGElement>, multiResizeDrag: MultiResizeDrag) => void;
+  commitResize: () => EditorAction;
 }
 
-export interface ResizeHandlers {
-  applyResize: (point: { x: number; y: number }, multiResizeDrag: MultiResizeDrag) => void;
-  onResizeHandlePointerDown: (event: PointerEvent<SVGCircleElement>, handleId: ResizeHandleId) => void;
-}
+export function useResize(
+  value: WeathermapSpec,
+  onChange: (v: WeathermapSpec) => void,
+  selectedIds: Set<string>,
+  toCanvasPoint: (event: PointerEvent<SVGSVGElement>) => { x: number; y: number }
+): UseResizeResult {
+  const selectedNodes = (value.nodes ?? []).filter((n) => selectedIds.has(n.id));
+  const selectedFloatingEdges = (value.edges ?? [])
+    .filter((ed) => selectedIds.has(ed.id) && ed.x2 !== undefined && ed.y2 !== undefined)
+    .map((ed) => ({ ...ed, x2: ed.x2!, y2: ed.y2! }));
 
-export function createResizeHandlers({
-  value,
-  onChange,
-  dispatch,
-  selectedNodes,
-  selectedFloatingEdges,
-}: ResizeHandlersOptions): ResizeHandlers {
-  function applyResize(point: { x: number; y: number }, multiResizeDrag: MultiResizeDrag): void {
+  function applyResize(event: PointerEvent<SVGSVGElement>, multiResizeDrag: MultiResizeDrag): void {
+    const point = toCanvasPoint(event);
     const { handleId, fixedX, fixedY, origBBox, origNodes, origEdges } = multiResizeDrag;
 
     const origWidth = origBBox.maxX - origBBox.minX;
@@ -90,16 +87,20 @@ export function createResizeHandlers({
     );
   }
 
-  function onResizeHandlePointerDown(event: PointerEvent<SVGCircleElement>, handleId: ResizeHandleId): void {
+  function commitResize(): EditorAction {
+    return { type: 'RESIZE_END' };
+  }
+
+  function startResize(event: PointerEvent<SVGCircleElement>, handleId: ResizeHandleId): EditorAction | null {
     event.stopPropagation();
     event.currentTarget.setPointerCapture(event.pointerId);
     const freeEndpoints = selectedFloatingEdges.map((ed) => ({ x: ed.x2 as number, y: ed.y2 as number }));
-    const selectionBounds = nodeBBox(selectedNodes, freeEndpoints);
+    const selectionBounds = nodeBBox(selectedNodes as NodeSpec[], freeEndpoints);
     if (!selectionBounds) {
-      return;
+      return null;
     }
     const fixed = handlePosition(selectionBounds, OPPOSITE_HANDLE[handleId]);
-    dispatch({
+    return {
       type: 'RESIZE_START',
       handleId,
       fixedX: fixed.x,
@@ -107,8 +108,8 @@ export function createResizeHandlers({
       origBBox: selectionBounds,
       origNodes: selectedNodes.map((n) => ({ id: n.id, x: n.x, y: n.y, size: n.size })),
       origEdges: selectedFloatingEdges.map((ed) => ({ id: ed.id, x2: ed.x2 as number, y2: ed.y2 as number })),
-    });
+    };
   }
 
-  return { applyResize, onResizeHandlePointerDown };
+  return { startResize, applyResize, commitResize };
 }

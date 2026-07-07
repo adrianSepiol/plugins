@@ -11,7 +11,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-import { AnchorPoint, EdgeSpec, EdgeThresholdStep, NodeSpec } from '../types/weathermap-types';
+import { AnchorPoint, EdgeSpec, EdgeThresholdStep, NodeSpec } from '../model';
 
 // Unit offsets for each anchor (multiples of half node size)
 export const ANCHOR_OFFSETS: Record<AnchorPoint, [number, number]> = {

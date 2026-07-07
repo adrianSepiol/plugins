@@ -12,9 +12,11 @@
 // limitations under the License.
 
 import { PointerEvent, ReactElement } from 'react';
-import { NodeSpec, AnchorPoint } from '../../types/weathermap-types';
-import { EditorTheme } from '../../utils/editorTheme';
-import { NodeRenderer } from '../node/NodeRenderer';
+import { NodeSpec, AnchorPoint } from '../../model';
+import { editorStyles } from '../../utils/editorStyles';
+import { useWeathermapTheme } from '../../hooks/useWeathermapTheme';
+import { useZoomContext } from '../../contexts/ZoomContext';
+import { NodeRenderer } from '../shared/NodeRenderer';
 import { ConnectionHandles } from './ConnectionHandles';
 
 interface EditorNodeProps {
@@ -23,7 +25,6 @@ interface EditorNodeProps {
   isSelected: boolean;
   snapTarget: boolean;
   isDragging: boolean;
-  theme: EditorTheme;
   onPointerDown: (event: PointerEvent<SVGRectElement>) => void;
   onPointerMove: (event: PointerEvent<SVGRectElement>) => void;
   onMouseEnter: () => void;
@@ -37,13 +38,13 @@ export function EditorNode({
   isSelected,
   snapTarget,
   isDragging,
-  theme,
   onPointerDown,
   onPointerMove,
   onMouseEnter,
   onMouseLeave,
   onCrossDragStart,
 }: EditorNodeProps): ReactElement {
+  const theme = editorStyles(useWeathermapTheme(), useZoomContext().transform.k);
   return (
     <g onMouseEnter={onMouseEnter} onMouseLeave={onMouseLeave}>
       <NodeRenderer

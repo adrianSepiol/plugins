@@ -11,10 +11,10 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-import { ReactElement } from 'react';
+import { ReactElement, useMemo } from 'react';
 import { Checkbox, FormControlLabel, MenuItem, Stack, TextField, Typography } from '@mui/material';
-import { useQueryCountContext } from '@perses-dev/plugin-system';
-import { AnchorPoint, EdgeSpec, NodeSpec } from '../../types/weathermap-types';
+import { generateQueryNames, useDataQueriesContext } from '@perses-dev/plugin-system';
+import { AnchorPoint, EdgeSpec, NodeSpec } from '../../model';
 
 const ANCHOR_OPTIONS: AnchorPoint[] = ['n', 'ne', 'e', 'se', 's', 'sw', 'w', 'nw'];
 
@@ -26,7 +26,9 @@ interface EdgePropertiesPanelProps {
 
 export function EdgePropertiesPanel({ edge, nodes, onChange }: EdgePropertiesPanelProps): ReactElement {
   const hasFreeTarget = edge.target === '';
-  const queryCount = useQueryCountContext();
+  const { queryDefinitions } = useDataQueriesContext();
+  const queryCount = queryDefinitions.length;
+  const queryNames = useMemo(() => generateQueryNames(queryDefinitions), [queryDefinitions]);
   const queryIndexes = Array.from({ length: queryCount }, (_, i) => i);
 
   return (
@@ -182,7 +184,7 @@ export function EdgePropertiesPanel({ edge, nodes, onChange }: EdgePropertiesPan
             </MenuItem>
             {queryIndexes.map((qi) => (
               <MenuItem key={qi} value={qi}>
-                #{qi + 1}
+                {queryNames[qi] ?? `#${qi + 1}`}
               </MenuItem>
             ))}
           </TextField>
