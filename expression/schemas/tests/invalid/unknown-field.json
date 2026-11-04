@@ -1,0 +1,9 @@
+{
+  "kind": "ExpressionQuery",
+  "spec": {
+    "type": "math",
+    "expression": "$A",
+    "unknown": true
+  }
+}
+

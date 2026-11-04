@@ -1,0 +1,8 @@
+{
+  "kind": "ExpressionQuery",
+  "spec": {
+    "type": "math",
+    "expression": "$A / ${my query} * 100"
+  }
+}
+
