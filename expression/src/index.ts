@@ -11,8 +11,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-export { getPluginModule } from "./getPluginModule";
-export * from "./expression-query-types";
-export * from "./ExpressionQuery";
-export * from "./ExpressionQueryEditor";
-export * from "./get-expression-data";
+export { getPluginModule } from './getPluginModule';
+export * from './expression-query-types';
+export * from './ExpressionQuery';
+export * from './ExpressionQueryEditor';
+export * from './get-expression-data';
+export * from './engine';

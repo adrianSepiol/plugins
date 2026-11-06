@@ -17,4 +17,3 @@ export default definePackageVitestConfig({
   packageDir: import.meta.dirname,
   setupFiles: ['src/setup-tests.ts'],
 });
-

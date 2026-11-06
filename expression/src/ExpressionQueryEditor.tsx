@@ -11,17 +11,15 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-import { MenuItem, Stack, TextField, Typography } from "@mui/material";
-import type { OptionsEditorProps } from "@perses-dev/plugin-system";
-import { produce } from "immer";
-import type { ReactElement } from "react";
-import { useState } from "react";
+import { MenuItem, Stack, TextField, Typography } from '@mui/material';
+import type { OptionsEditorProps } from '@perses-dev/plugin-system';
+import { produce } from 'immer';
+import type { ReactElement } from 'react';
+import { useState } from 'react';
 
-import type {
-  ExpressionQuerySpec,
-  ExpressionType,
-} from "./expression-query-types";
-import { EXPRESSION_TYPES } from "./expression-query-types";
+import { FUNCTION_NAMES } from './engine';
+import type { ExpressionQuerySpec } from './expression-query-types';
+import { EXPRESSION_TYPES } from './expression-query-types';
 
 type ExpressionQueryEditorProps = OptionsEditorProps<ExpressionQuerySpec>;
 
@@ -61,7 +59,7 @@ function CommitTextField(props: {
       onChange={(e) => setCurrent(e.target.value)}
       onBlur={commit}
       onKeyDown={(e) => {
-        if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) {
+        if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) {
           e.preventDefault();
           commit();
         }
@@ -70,17 +68,13 @@ function CommitTextField(props: {
   );
 }
 
-function MathEditor({
-  value,
-  onChange,
-  isReadonly,
-}: ExpressionQueryEditorProps): ReactElement {
+function MathEditor({ value, onChange, isReadonly }: ExpressionQueryEditorProps): ReactElement {
   return (
     <Stack spacing={1}>
       <CommitTextField
         label="Expression"
-        value={value.expression ?? ""}
-        placeholder="$A / $B * 100"
+        value={value.expression ?? ''}
+        placeholder="$1 / $2 * 100"
         readOnly={isReadonly}
         onCommit={(expression) =>
           onChange(
@@ -91,20 +85,17 @@ function MathEditor({
         }
       />
       <Typography variant="caption" color="text.secondary">
-        Reference the other queries with $A, $B... (or their name, e.g. ${"{"}my
-        query{"}"}). Operators: + - * / % ** == != &lt; &lt;= &gt; &gt;= && ||
-        !. Functions: abs, ceil, floor, round, log, log10, exp, sqrt, is_null,
-        is_nan, is_inf, is_number. Series are matched on their labels.
+        Reference the other queries by their position with $1, $2, ... Operators: + - * / % ** == != &lt; &lt;= &gt;
+        &gt;= &amp;&amp; || !. Functions: {FUNCTION_NAMES.join(', ')}. Series are matched when their labels are exactly
+        equal.
       </Typography>
     </Stack>
   );
 }
 
-export function ExpressionQueryEditor(
-  props: ExpressionQueryEditorProps,
-): ReactElement {
+export function ExpressionQueryEditor(props: ExpressionQueryEditorProps): ReactElement {
   const { value, onChange, isReadonly } = props;
-  const type = value.type ?? "math";
+  const type = value.type ?? 'math';
 
   return (
     <Stack spacing={2} paddingBottom={1}>
@@ -115,7 +106,10 @@ export function ExpressionQueryEditor(
         value={type}
         disabled={isReadonly || EXPRESSION_TYPES.length < 2}
         helperText={EXPRESSION_TYPES.find((t) => t.value === type)?.description}
-        onChange={(e) => onChange({ type: e.target.value as ExpressionType })}
+        onChange={(e) => {
+          const selected = EXPRESSION_TYPES.find((t) => t.value === e.target.value);
+          if (selected) onChange({ type: selected.value });
+        }}
       >
         {EXPRESSION_TYPES.map((t) => (
           <MenuItem key={t.value} value={t.value}>
@@ -123,7 +117,7 @@ export function ExpressionQueryEditor(
           </MenuItem>
         ))}
       </TextField>
-      {type === "math" && <MathEditor {...props} />}
+      {type === 'math' && <MathEditor {...props} />}
     </Stack>
   );
 }

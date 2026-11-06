@@ -11,56 +11,45 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+import { parseExpression } from './engine';
+
 /**
  * The type of operation done by an expression. Only `math` is available for now.
  * To add a new type: extend this union and ExpressionQuerySpec, add it to EXPRESSION_TYPES, getExpressionInputs and
  * the editor, and add it to the CUE schema.
  */
-export type ExpressionType = "math";
+export type ExpressionType = 'math';
 
 /**
  * Spec of the ExpressionQuery plugin. The fields used depend on the type of the expression.
- * Other queries of the panel are referenced by their refId: their name when it is set, otherwise A, B, C...
+ * Other queries of the panel are referenced by their 1-based position: $1, $2, $3...
  */
 export interface ExpressionQuerySpec {
   type: ExpressionType;
-  /** math: e.g. "$A / $B * 100". Use ${my query} when the refId contains special characters. */
+  /** math: e.g. "$1 / $2 * 100". Reference the other queries by their position with $1, $2... */
   expression?: string;
 }
 
-export const EXPRESSION_TYPES: Array<{
-  value: ExpressionType;
-  label: string;
-  description: string;
-}> = [
+export const EXPRESSION_TYPES: Array<{ value: ExpressionType; label: string; description: string }> = [
   {
-    value: "math",
-    label: "Math",
-    description: "Free-form math formula on time series, e.g. $A / $B * 100",
+    value: 'math',
+    label: 'Math',
+    description: 'Free-form math formula on time series, e.g. $1 / $2 * 100',
   },
 ];
 
 export function createInitialExpressionQuerySpec(): ExpressionQuerySpec {
-  return { type: "math", expression: "" };
+  return { type: 'math', expression: '' };
 }
 
-const VARIABLE_REGEX = /\$\{([^}]+)\}|\$([A-Za-z_][A-Za-z0-9_]*)/g;
-
 /**
- * Returns the refIds of the queries used by the expression.
+ * Returns the sorted, unique 0-based indexes of the queries referenced by the expression.
+ * Uses the engine parser so references are extracted exactly as the evaluator sees them.
+ * Returns [] if the expression is blank or fails to parse (the error surfaces at evaluation time).
  */
-export function getExpressionInputs(spec: ExpressionQuerySpec): string[] {
-  switch (spec.type) {
-    case "math": {
-      const result = new Set<string>();
-      for (const match of (spec.expression ?? "").matchAll(VARIABLE_REGEX)) {
-        const refId = (match[1] ?? match[2] ?? "").trim();
-        if (refId) {
-          result.add(refId);
-        }
-      }
-      return [...result];
-    }
-  }
-  return [];
+export function getExpressionInputs(spec: ExpressionQuerySpec): number[] {
+  const expr = spec.expression ?? '';
+  if (!expr.trim()) return [];
+  const result = parseExpression(expr);
+  return result.ok ? result.references : [];
 }

@@ -30,12 +30,12 @@
   "peerDependencies": {
     "@emotion/react": "^11.7.1",
     "@emotion/styled": "^11.6.0",
-    "@perses-dev/client": "^0.55.0",
-    "@perses-dev/plugin-system": "^0.55.0",
+    "@perses-dev/plugin-system": "^0.56.0-beta.1",
+    "@mui/material": "^5.0.0 || ^6.0.0",
     "@perses-dev/spec": "^0.3.0",
     "immer": "^10.1.1",
-    "react": "^18.3.0",
-    "react-dom": "^18.3.0"
+    "react": "^18.3.0 || ^19.0.0",
+    "react-dom": "^18.3.0 || ^19.0.0"
   },
   "files": [
     "lib/**/*",
@@ -51,7 +51,7 @@
     "schemasPath": "schemas",
     "plugins": [
       {
-        "kind": "TimeSeriesQuery",
+        "kind": "ExpressionQuery",
         "spec": {
           "display": {
             "name": "Expression",
@@ -64,7 +64,7 @@
   },
   "devDependencies": {
     "@emotion/react": "^11.14.0",
-    "@emotion/styled": "^11.14.1"
+    "@emotion/styled": "^11.14.1",
+    "@mui/material": "^6.1.10"
   }
 }
-

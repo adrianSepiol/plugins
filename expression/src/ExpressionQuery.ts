@@ -11,29 +11,22 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-import type { TimeSeriesQueryPlugin } from "@perses-dev/plugin-system";
+import type { ExpressionQueryPlugin, ExpressionQueryPluginDependencies } from '@perses-dev/plugin-system';
 
-import type { ExpressionQuerySpec } from "./expression-query-types";
-import {
-  createInitialExpressionQuerySpec,
-  getExpressionInputs,
-} from "./expression-query-types";
-import { ExpressionQueryEditor } from "./ExpressionQueryEditor";
-import { getExpressionData } from "./get-expression-data";
-
-type Dependencies = ReturnType<
-  NonNullable<TimeSeriesQueryPlugin["dependsOn"]>
-> & { queries?: string[] };
+import type { ExpressionQuerySpec } from './expression-query-types';
+import { createInitialExpressionQuerySpec, getExpressionInputs } from './expression-query-types';
+import { ExpressionQueryEditor } from './ExpressionQueryEditor';
+import { getExpressionData } from './get-expression-data';
 
 /**
- * A time series query computed from the other time series queries of the panel (Math, Reduce, Resample, Threshold),
- * whatever the datasource they are coming from. The evaluation is done by the Perses server.
+ * An ExpressionQuery plugin computing a time series from the other time series queries of the panel,
+ * whatever the datasource they come from. The evaluation runs entirely in the browser.
  */
-export const ExpressionQuery: TimeSeriesQueryPlugin<ExpressionQuerySpec> = {
+export const ExpressionQuery: ExpressionQueryPlugin<ExpressionQuerySpec> = {
   getTimeSeriesData: getExpressionData,
   OptionsEditorComponent: ExpressionQueryEditor,
   createInitialOptions: createInitialExpressionQuerySpec,
-  dependsOn: (spec): Dependencies => ({
+  dependsOn: (spec): ExpressionQueryPluginDependencies => ({
     queries: getExpressionInputs(spec),
   }),
 };

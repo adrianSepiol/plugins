@@ -11,133 +11,106 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-import type { TimeSeriesData } from "@perses-dev/spec";
+import type { ExpressionQueryContext } from '@perses-dev/plugin-system';
+import type { TimeSeriesData } from '@perses-dev/spec';
 
-import { getExpressionInputs } from "./expression-query-types";
-import { ExpressionQuery } from "./ExpressionQuery";
-import type { ExpressionQueryContext } from "./get-expression-data";
-import {
-  buildEvaluateRequest,
-  EXPRESSION_EVALUATE_PATH,
-  getExpressionData,
-} from "./get-expression-data";
+import type { EvaluationRequest, ExpressionEvaluator } from './engine';
+import { ExpressionError } from './engine';
+import { getExpressionInputs } from './expression-query-types';
+import { ExpressionQuery } from './ExpressionQuery';
+import { buildEvaluationRequest, getExpressionData } from './get-expression-data';
 
-const dataA: TimeSeriesData = { series: [{ name: "a", values: [[0, 1]] }] };
-const dataB: TimeSeriesData = { series: [{ name: "b", values: [[0, 2]] }] };
+const dataA: TimeSeriesData = {
+  series: [{ name: 'a', labels: {}, values: [[1000, 1]] }],
+};
+const dataB: TimeSeriesData = {
+  series: [{ name: 'b', labels: {}, values: [[1000, 2]] }],
+};
 
-function context(
-  inputs?: Record<string, TimeSeriesData>,
-): ExpressionQueryContext {
+function makeContext(inputs?: Record<number, TimeSeriesData>): ExpressionQueryContext {
   return {
     timeRange: { start: new Date(1000), end: new Date(61000) },
     suggestedStepMs: 15000,
-    mode: "range",
-    refId: "C",
-    inputs,
+    mode: 'range',
+    inputs: inputs ?? {},
     variableState: {},
-    datasourceStore: {} as ExpressionQueryContext["datasourceStore"],
+    datasourceStore: {} as ExpressionQueryContext['datasourceStore'],
   };
 }
 
-describe("getExpressionInputs", () => {
-  it("should extract the refIds of a math expression", () => {
-    expect(
-      getExpressionInputs({
-        type: "math",
-        expression: "$A / ${my query} * 100 + $A + $B_2",
-      }),
-    ).toEqual(["A", "my query", "B_2"]);
+describe('getExpressionInputs', () => {
+  it('extracts 0-based query indexes from a math expression', () => {
+    expect(getExpressionInputs({ type: 'math', expression: '$1 / $2 * 100 + $1 + $3' })).toEqual([0, 1, 2]);
   });
 
-  it("should be used as query dependencies", () => {
-    expect(
-      ExpressionQuery.dependsOn?.(
-        { type: "math", expression: "$A + $B" },
-        context(),
-      ),
-    ).toEqual({
-      queries: ["A", "B"],
+  it('returns [] for blank expression', () => {
+    expect(getExpressionInputs({ type: 'math', expression: '' })).toEqual([]);
+    expect(getExpressionInputs({ type: 'math', expression: '  ' })).toEqual([]);
+  });
+
+  it('returns [] for unparseable expression (error surfaces at evaluation)', () => {
+    expect(getExpressionInputs({ type: 'math', expression: '$1 +' })).toEqual([]);
+  });
+
+  it('is used as query dependencies', () => {
+    expect(ExpressionQuery.dependsOn?.({ type: 'math', expression: '$1 + $2' }, makeContext())).toEqual({
+      queries: [0, 1],
     });
   });
 });
 
-describe("buildEvaluateRequest", () => {
-  it("should send only the inputs used by the expression", () => {
-    const request = buildEvaluateRequest(
-      { type: "math", expression: "$A * 2" },
-      context({ A: dataA, B: dataB }),
-    );
-    expect(request).toEqual({
-      refId: "C",
-      start: 1000,
-      end: 61000,
-      stepMs: 15000,
-      mode: "range",
-      inputs: { A: dataA },
-      spec: { type: "math", expression: "$A * 2" },
-    });
-  });
-
-  it("should fail when an input is missing", () => {
-    expect(() =>
-      buildEvaluateRequest(
-        { type: "math", expression: "$Z + 1" },
-        context({ A: dataA }),
-      ),
-    ).toThrow("The query Z used by the expression is not available");
+describe('buildEvaluationRequest', () => {
+  it('passes inputs through as-is; the engine reports unknown_reference errors', () => {
+    const inputs = { 0: dataA, 1: dataB };
+    const req = buildEvaluationRequest({ type: 'math', expression: '$1 * 2' }, makeContext(inputs));
+    expect(req.inputs).toBe(inputs);
+    expect(req.startMs).toBe(1000);
+    expect(req.endMs).toBe(61000);
+    expect(req.stepMs).toBe(15000);
+    expect(req.mode).toBe('range');
+    expect(req.expression).toBe('$1 * 2');
   });
 });
 
-describe("getExpressionData", () => {
-  afterEach(() => {
-    vi.restoreAllMocks();
+describe('getExpressionData', () => {
+  it('returns empty series for a blank math expression without calling evaluator', async () => {
+    const fakeEvaluator: ExpressionEvaluator = {
+      evaluate: vi.fn().mockRejectedValue(new Error('should not be called')),
+    };
+    expect(await getExpressionData({ type: 'math', expression: ' ' }, makeContext(), undefined, fakeEvaluator)).toEqual(
+      { series: [] },
+    );
+    expect(fakeEvaluator.evaluate).not.toHaveBeenCalled();
   });
 
-  it("should evaluate the expression on the Perses server", async () => {
-    const fetchMock = vi.spyOn(globalThis, "fetch").mockResolvedValue(
-      new Response(
-        JSON.stringify({ series: [{ name: "a", values: [[0, 2]] }] }),
-        {
-          status: 200,
-          headers: { "Content-Type": "application/json" },
-        },
-      ),
+  it('calls the evaluator and sets executedQueryString', async () => {
+    const result: TimeSeriesData = { series: [{ name: 'x', values: [[1000, 2]] }] };
+    const fakeEvaluator: ExpressionEvaluator = {
+      evaluate: vi.fn().mockResolvedValue(result),
+    };
+    const out = await getExpressionData(
+      { type: 'math', expression: '$1 * 2' },
+      makeContext({ 0: dataA }),
+      undefined,
+      fakeEvaluator,
     );
-    const result = await getExpressionData(
-      { type: "math", expression: "$A * 2" },
-      context({ A: dataA }),
-    );
-
-    expect(fetchMock).toHaveBeenCalledWith(
-      EXPRESSION_EVALUATE_PATH,
-      expect.objectContaining({ method: "POST" }),
-    );
-    const body = JSON.parse(fetchMock.mock.calls[0]?.[1]?.body as string);
-    expect(body.inputs).toEqual({ A: dataA });
-    expect(result.series).toEqual([{ name: "a", values: [[0, 2]] }]);
-    expect(result.metadata?.executedQueryString).toBe("$A * 2");
+    expect(fakeEvaluator.evaluate).toHaveBeenCalledOnce();
+    const called = (fakeEvaluator.evaluate as ReturnType<typeof vi.fn>).mock.calls[0]?.[0] as EvaluationRequest;
+    expect(called.expression).toBe('$1 * 2');
+    expect(called.inputs[0]).toBe(dataA);
+    expect(out.metadata?.executedQueryString).toBe('$1 * 2');
+    expect(out.timeRange).toEqual({ start: new Date(1000), end: new Date(61000) });
   });
 
-  it("should not call the server for an empty math expression", async () => {
-    const fetchMock = vi.spyOn(globalThis, "fetch");
-    expect(
-      await getExpressionData({ type: "math", expression: " " }, context()),
-    ).toEqual({ series: [] });
-    expect(fetchMock).not.toHaveBeenCalled();
+  it('uses the real in-thread evaluator for a smoke test', async () => {
+    const result = await getExpressionData({ type: 'math', expression: '$1 * 2' }, makeContext({ 0: dataA }));
+    expect(result.series[0]?.values[0]?.[1]).toBe(2);
+    expect(result.metadata?.executedQueryString).toBe('$1 * 2');
   });
 
-  it("should report the error returned by the server", async () => {
-    vi.spyOn(globalThis, "fetch").mockResolvedValue(
-      new Response(JSON.stringify({ message: "invalid math expression" }), {
-        status: 400,
-        headers: { "Content-Type": "application/json" },
-      }),
+  it('propagates errors from the evaluator', async () => {
+    await expect(getExpressionData({ type: 'math', expression: '$1 +' }, makeContext({ 0: dataA }))).rejects.toThrow(
+      ExpressionError,
     );
-    await expect(
-      getExpressionData(
-        { type: "math", expression: "$A +" },
-        context({ A: dataA }),
-      ),
-    ).rejects.toThrow("invalid math expression");
   });
 });

@@ -11,12 +11,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-import type {
-  PluginModuleResource,
-  PluginModuleSpec,
-} from "@perses-dev/plugin-system";
+import type { PluginModuleResource, PluginModuleSpec } from '@perses-dev/plugin-system';
 
-import packageJson from "../package.json" with { type: "json" };
+import packageJson from '../package.json' with { type: 'json' };
 
 /**
  * Returns the plugin module information from package.json
@@ -24,7 +21,7 @@ import packageJson from "../package.json" with { type: "json" };
 export function getPluginModule(): PluginModuleResource {
   const { name, version, perses } = packageJson;
   return {
-    kind: "PluginModule",
+    kind: 'PluginModule',
     metadata: {
       name,
       version,
