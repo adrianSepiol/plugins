@@ -11,12 +11,14 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-import type { TimeSeriesData } from '@perses-dev/spec';
+import type { TimeSeriesData, TimeSeriesValueTuple } from '@perses-dev/spec';
 
 import { ExpressionError } from '../expression-error';
 import type { SampleBudget } from './limits';
 import type { Sample, Series } from './values';
 import { freezeLabels } from './values';
+
+const DROP_NAME = new Set(['__name__']);
 
 export interface AlignRequest {
   /** Pre-built shared grid (timestamps in ms). */
@@ -33,7 +35,7 @@ export interface AlignedInput {
   series: Series[];
 }
 
-function medianInterval(sorted: Array<[number, number | null]>): number | null {
+function medianInterval(sorted: readonly TimeSeriesValueTuple[]): number | null {
   if (sorted.length < 2) return null;
   const diffs: number[] = [];
   let prev: number | undefined;
@@ -126,26 +128,21 @@ export function alignInput(req: AlignRequest): AlignedInput {
       throw new ExpressionError({ code: 'aborted', message: 'evaluation was aborted' });
     }
 
-    // drop __name__ from labels
-    const rawLabels: Record<string, string> = {};
-    for (const [k, v] of Object.entries(s.labels ?? {})) {
-      if (k !== '__name__') {
-        rawLabels[k] = v;
-      }
-    }
-    const { labels, key } = freezeLabels(rawLabels);
+    const { labels, key } = freezeLabels(s.labels ?? {}, DROP_NAME);
 
     // sort samples by timestamp only if needed (datasource output is usually already sorted)
-    let sorted = s.values as Array<[number, number | null]>;
+    let sorted = s.values;
     let needsSort = false;
-    for (let si = 1; si < sorted.length; si++) {
-      if ((sorted[si - 1] as [number, number | null])[0] > (sorted[si] as [number, number | null])[0]) {
+    let prevTs = -Infinity;
+    for (const [ts] of s.values) {
+      if (ts < prevTs) {
         needsSort = true;
         break;
       }
+      prevTs = ts;
     }
     if (needsSort) {
-      sorted = sorted.slice().sort(([a], [b]) => a - b);
+      sorted = sorted.toSorted(([a], [b]) => a - b);
     }
 
     const seriesLookback = Math.max(lookbackMs, input.stepMs ?? 0, medianInterval(sorted) ?? 0);

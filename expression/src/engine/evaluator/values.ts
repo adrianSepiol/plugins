@@ -24,18 +24,25 @@ function compareStrings(a: string, b: string): number {
   return 0;
 }
 
-export function labelsKey(labels: Labels): string {
+export function labelsKey(labels: Record<string, string>): string {
   return JSON.stringify(Object.fromEntries(Object.entries(labels).toSorted(([a], [b]) => compareStrings(a, b))));
 }
 
 /**
- * Sorts, freezes and returns the labels alongside their pre-computed key.
- * Use this when creating a new Series so the key is computed exactly once.
+ * Filters (optionally dropping keys), sorts, freezes, and returns the labels
+ * alongside their pre-computed key. Use this when creating a new Series so
+ * the key is computed exactly once.
  */
-export function freezeLabels(labels: Record<string, string>): { labels: Labels; key: string } {
-  const sorted = Object.fromEntries(Object.entries(labels).toSorted(([a], [b]) => compareStrings(a, b)));
-  const frozen = Object.freeze(sorted);
-  return { labels: frozen, key: JSON.stringify(sorted) };
+export function freezeLabels(
+  labels: Record<string, string>,
+  drop?: ReadonlySet<string>,
+): { labels: Labels; key: string } {
+  const filtered: Record<string, string> = {};
+  for (const [k, v] of Object.entries(labels)) {
+    if (!drop?.has(k)) filtered[k] = v;
+  }
+  const key = labelsKey(filtered);
+  return { labels: Object.freeze(filtered), key };
 }
 
 export interface Scalar {

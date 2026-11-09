@@ -19,7 +19,7 @@ import { DEFAULT_LIMITS } from './evaluator/limits';
 import type { ErrorCode, ExpressionErrorInfo } from './expression-error';
 import { ExpressionError } from './expression-error';
 import { createParseCache } from './parser/parse-cache';
-import { parse } from './parser/parser';
+import { MAX_SOURCE_LENGTH, parse } from './parser/parser';
 import type { EvaluationRequest, Limits } from './types';
 
 export type { ErrorCode, ExpressionErrorInfo, EvaluationRequest, Limits };
@@ -27,10 +27,10 @@ export { ExpressionError, DEFAULT_LIMITS, FUNCTION_NAMES };
 
 // ── Public result types ────────────────────────────────────────────────────
 
-export type ParseResult = { ok: true; references: number[] } | { ok: false; error: ExpressionErrorInfo };
+export type ParseResult = { ok: true; references: readonly number[] } | { ok: false; error: ExpressionErrorInfo };
 
 // Module-level LRU cache shared by parseExpression and evaluateExpression.
-const cachedParse = createParseCache(parse);
+const cachedParse = createParseCache(parse, 128, MAX_SOURCE_LENGTH);
 
 // ── parseExpression ─────────────────────────────────────────────────────────
 

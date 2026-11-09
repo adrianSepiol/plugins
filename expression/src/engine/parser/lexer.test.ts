@@ -21,11 +21,11 @@ function tok(kind: Token['kind'], text: string, offset: number): Token {
 
 describe('tokenize', () => {
   it('handles an empty string', () => {
-    expect(tokenize('')).toEqual([tok('end', '', 0)]);
+    expect(tokenize('').tokens).toEqual([tok('end', '', 0)]);
   });
 
   it('tokenizes a simple expression', () => {
-    expect(tokenize('$1 + 2')).toEqual([
+    expect(tokenize('$1 + 2').tokens).toEqual([
       tok('reference', '$1', 0),
       tok('op', '+', 3),
       tok('number', '2', 5),
@@ -34,7 +34,7 @@ describe('tokenize', () => {
   });
 
   it('tokenizes integers, decimals and exponents', () => {
-    const tokens = tokenize('1 3.14 2e5');
+    const { tokens } = tokenize('1 3.14 2e5');
     expect(tokens).toEqual([
       tok('number', '1', 0),
       tok('number', '3.14', 2),
@@ -44,17 +44,17 @@ describe('tokenize', () => {
   });
 
   it('tokenizes identifiers followed by (', () => {
-    const tokens = tokenize('abs(');
+    const { tokens } = tokenize('abs(');
     expect(tokens.slice(0, 2)).toEqual([tok('ident', 'abs', 0), tok('(', '(', 3)]);
   });
 
   it('tokenizes all long operators before short ones', () => {
-    const tokens = tokenize('** == != <= >= && ||');
+    const { tokens } = tokenize('** == != <= >= && ||');
     expect(tokens.map((t) => t.text)).toEqual(['**', '==', '!=', '<=', '>=', '&&', '||', '']);
   });
 
   it('records correct offsets', () => {
-    const tokens = tokenize('1+2');
+    const { tokens } = tokenize('1+2');
     expect(tokens[0]?.offset).toBe(0);
     expect(tokens[1]?.offset).toBe(1);
     expect(tokens[2]?.offset).toBe(2);
@@ -95,7 +95,7 @@ describe('tokenize', () => {
   });
 
   it('skips whitespace', () => {
-    const tokens = tokenize('  1  ');
+    const { tokens } = tokenize('  1  ');
     expect(tokens).toEqual([tok('number', '1', 2), tok('end', '', 5)]);
   });
 
@@ -111,5 +111,11 @@ describe('tokenize', () => {
 
   it('throws on 1e+ (exponent with sign but no digits)', () => {
     expect(() => tokenize('1e+')).toThrow(ExpressionError);
+  });
+
+  it('end is typed by construction and matches the last token', () => {
+    const { tokens, end } = tokenize('1 + 2');
+    expect(end).toBe(tokens[tokens.length - 1]);
+    expect(end.kind).toBe('end');
   });
 });

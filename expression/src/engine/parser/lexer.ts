@@ -38,7 +38,13 @@ const RE_NUMBER = /(\d+\.?\d*|\.\d+)([eE][+-]?\d+)?/y;
 const RE_DIGITS = /\d+/y;
 const RE_IDENT = /[a-zA-Z_][a-zA-Z0-9_]*/y;
 
-export function tokenize(source: string): Token[] {
+export interface TokenizeResult {
+  tokens: Token[];
+  /** The 'end' sentinel appended after all real tokens. */
+  end: Token;
+}
+
+export function tokenize(source: string): TokenizeResult {
   const tokens: Token[] = [];
   let i = 0;
 
@@ -153,6 +159,7 @@ export function tokenize(source: string): Token[] {
     });
   }
 
-  tokens.push({ kind: 'end', text: '', offset: source.length });
-  return tokens;
+  const end: Token = { kind: 'end', text: '', offset: source.length };
+  tokens.push(end);
+  return { tokens, end };
 }

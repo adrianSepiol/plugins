@@ -13,10 +13,13 @@
 
 import { ExpressionError } from '../expression-error';
 import type { BinaryOp, ExpressionNode, UnaryOp } from './expression-tree';
+import { collectReferences } from './expression-tree';
 import type { Token } from './lexer';
 import { tokenize } from './lexer';
 
-const MAX_SOURCE_LENGTH = 4096;
+export { collectReferences };
+
+export const MAX_SOURCE_LENGTH = 4096;
 const MAX_DEPTH = 64;
 
 // Pratt precedence levels (higher = tighter binding).
@@ -229,53 +232,23 @@ export const parse: Parser = (source: string): ExpressionNode => {
       length: source.length,
     });
   }
-  const tokens = tokenize(source);
-  // tokenize always appends an 'end' token as the last element
+  const { tokens, end } = tokenize(source);
   const state: ParseState = {
     source,
     tokens,
     pos: 0,
     depth: 0,
-    end: tokens[tokens.length - 1] as Token,
+    end,
   };
   const node = parseExpr(state, 0);
-  const end = peek(state);
-  if (end.kind !== 'end') {
+  const trailing = peek(state);
+  if (trailing.kind !== 'end') {
     throw new ExpressionError({
       code: 'syntax',
-      message: `unexpected token ${JSON.stringify(end.text)} at offset ${end.offset}`,
-      offset: end.offset,
-      length: end.text.length || 1,
+      message: `unexpected token ${JSON.stringify(trailing.text)} at offset ${trailing.offset}`,
+      offset: trailing.offset,
+      length: trailing.text.length || 1,
     });
   }
   return node;
 };
-
-export function collectReferences(node: ExpressionNode): number[] {
-  const refs = new Set<number>();
-  function walk(n: ExpressionNode): void {
-    switch (n.kind) {
-      case 'number':
-        break;
-      case 'reference':
-        if (n.ref.type === 'index') {
-          refs.add(n.ref.index);
-        }
-        break;
-      case 'unary':
-        walk(n.operand);
-        break;
-      case 'binary':
-        walk(n.left);
-        walk(n.right);
-        break;
-      case 'call':
-        for (const arg of n.args) {
-          walk(arg);
-        }
-        break;
-    }
-  }
-  walk(node);
-  return Array.from(refs).toSorted((a, b) => a - b);
-}

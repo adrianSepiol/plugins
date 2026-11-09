@@ -65,3 +65,32 @@ export interface CallNode extends NodeBase {
 }
 
 export type ExpressionNode = NumberNode | ReferenceNode | UnaryNode | BinaryNode | CallNode;
+
+export function collectReferences(node: ExpressionNode): readonly number[] {
+  const refs = new Set<number>();
+  function walk(n: ExpressionNode): void {
+    switch (n.kind) {
+      case 'number':
+        break;
+      case 'reference':
+        if (n.ref.type === 'index') {
+          refs.add(n.ref.index);
+        }
+        break;
+      case 'unary':
+        walk(n.operand);
+        break;
+      case 'binary':
+        walk(n.left);
+        walk(n.right);
+        break;
+      case 'call':
+        for (const arg of n.args) {
+          walk(arg);
+        }
+        break;
+    }
+  }
+  walk(node);
+  return Object.freeze(Array.from(refs).toSorted((a, b) => a - b));
+}

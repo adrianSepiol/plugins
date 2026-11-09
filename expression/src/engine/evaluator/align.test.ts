@@ -213,6 +213,25 @@ describe('alignInput', () => {
     expect(result.series[0]?.values).toEqual([1, 2, 3, 4, 4]);
   });
 
+  it('does not copy already-sorted samples', () => {
+    const sortedValues: Array<[number, number | null]> = [
+      [1000, 1],
+      [16000, 2],
+      [31000, 3],
+      [46000, 4],
+      [61000, 5],
+    ];
+    const sliceSpy = vi.spyOn(sortedValues, 'slice');
+    const result = alignInput(
+      makeReq(DEFAULT_GRID, STEP, {
+        input: { series: [{ name: 's', labels: {}, values: sortedValues }] },
+      }),
+    );
+    expect(sliceSpy).not.toHaveBeenCalled();
+    expect(result.series[0]?.values).toEqual([1, 2, 3, 4, 5]);
+    sliceSpy.mockRestore();
+  });
+
   it('uses input stepMs for lookback when it is larger than the effective step', () => {
     // input.stepMs=60000, effective=15000 → lookback=60000
     // sample at 1000; grid points 1000, 16000, 31000, 46000, 61000

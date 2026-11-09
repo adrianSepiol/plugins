@@ -51,5 +51,5 @@ export function getExpressionInputs(spec: ExpressionQuerySpec): number[] {
   const expr = spec.expression ?? '';
   if (!expr.trim()) return [];
   const result = parseExpression(expr);
-  return result.ok ? result.references : [];
+  return result.ok ? [...result.references] : [];
 }
